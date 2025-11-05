@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-from applications.generator_response.data_serialization.read_data import (
-    find_correct_header,
-)
+from applications.generator_response.data_serialization.read_data import find_correct_header
+from applications.generator_response.data_serialization.modal_dialog import add_metadata
 
 # import tab1_data_viewer, tab2_data_plotting
 from pages.generator_response.tab1_data_viewer import data_viewer
@@ -33,9 +32,9 @@ if uploaded_file is not None:
         or st.session_state["current_file_name"] != file_name
     ):
         # 2. Reset / Clear old state data (Optional: clear the entire dictionary if you don't need history)
-        if "uploaded_file" in st.session_state:
+        if "current_file_data" in st.session_state:
             # Clear all cached file data when a new file is uploaded
-            del st.session_state["uploaded_file"]
+            del st.session_state["current_file_data"]
 
         # 3. Update the tracker to the new file's name
         st.session_state["current_file_name"] = file_name
@@ -45,14 +44,18 @@ if uploaded_file is not None:
 
         if uploaded_df is not None:
 
-            if "uploaded_file" not in st.session_state:
-                st.session_state["uploaded_file"] = {}
+            if "current_file_data" not in st.session_state:
+                st.session_state["current_file_data"] = {}
 
-                if file_name not in st.session_state["uploaded_file"]:
-                    st.session_state["uploaded_file"][file_name] = {}
-                    st.session_state["uploaded_file"][file_name] = uploaded_df
+            st.session_state["current_file_data"] = uploaded_df
+
+            # if file_name not in st.session_state["uploaded_file"]:
+            #     st.session_state["uploaded_file"][file_name] = {}
+            #     st.session_state["uploaded_file"][file_name] = uploaded_df
 
             st.sidebar.success(f"✅ {file_name} uploaded successfully!")
+
+            ## --- Button to add metadata into file --- ##
             normalize_btn = st.sidebar.button(
                 "🔧 Normalize Data",
                 type="primary",
@@ -60,24 +63,12 @@ if uploaded_file is not None:
                 help="Click to process and normalize the uploaded data",
             )
 
-            # Handle button click
             if normalize_btn:
-                with st.sidebar:
-                    with st.spinner("Normalizing data..."):
-                        try:
-                            # Call your normalization function
-                            # normalized_data = data_normalisation(uploaded_df)
-
-                            # # Store normalized data in session state
-                            # st.session_state["uploaded_file"][
-                            #     file_name
-                            # ] = normalized_data
-                            # st.session_state["data_normalized"] = True
-
-                            st.success("✅ Data normalized successfully!")
-
-                        except Exception as e:
-                            st.error(f"❌ Failed to normalize data: {e}")
+                try:
+                    add_metadata()
+                except Exception as e:
+                    st.error(f"❌ Failed to normalize data: {e}")
+            ## --- END Button to add metadata into file --- ##
 
             with tab1:
                 data_viewer()

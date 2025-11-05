@@ -24,8 +24,7 @@ def data_viewer():
     st.header("⚙️ Key Parameter Metrics")
     metric_display = ["frequency", "mw"]
 
-    current_file_name = st.session_state["current_file_name"]
-    (raw_df, correct_df) = st.session_state["uploaded_file"][current_file_name]
+    (raw_df, correct_df) = st.session_state["current_file_data"]
 
     for metric in metric_display:
         result = get_key_metric(
