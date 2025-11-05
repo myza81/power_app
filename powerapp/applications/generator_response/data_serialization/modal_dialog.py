@@ -4,7 +4,7 @@ import pandas as pd
 from powerapp.applications.generator_response.calculation.mw_mvar import (
     calculate_mw_mvar,
 )
-
+# addd
 # from powerapp.applications.generator_response.data_serialization.data_normalisation import get_riched_df
 
 
