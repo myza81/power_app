@@ -1,20 +1,23 @@
 import streamlit as st
 
-#-- page setup --#
-main = st.Page(
-    page="pages/main.py",
+# -- page setup --#
+home = st.Page(
+    page="pages/home/homepage.py",
     title="Main Page",
     icon=":material/home:",
-    default=True
-
+    default=True,
 )
-project_1_page = st.Page(
-    page="pages/generator_response.py",
+page_1 = st.Page(
+    page="pages/generator_response/gen_response.py",
     title="Generator Response",
-    icon=":material/solar_power:"
-
+    icon=":material/solar_power:",
+)
+page_2 = st.Page(
+    page="pages/underfrequency/ufls.py",
+    title="UFLS",
+    icon=":material/lightning_stand:",
 )
 
-pg = st.navigation(pages=[main, project_1_page])
 
+pg = st.navigation(pages=[home, page_1, page_2])
 pg.run()

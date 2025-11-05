@@ -1,0 +1,9 @@
+/* Custom CSS for Streamlit App */
+
+/* This targets the main container block where all content is placed */
+.block-container {
+    padding-top: 1rem; /* Reduced top padding */
+    padding-bottom: 1rem; /* Reduced bottom padding */
+    padding-left: 3rem; /* Adjusted left padding */
+    padding-right: 3rem; /* Adjusted right padding */
+}
