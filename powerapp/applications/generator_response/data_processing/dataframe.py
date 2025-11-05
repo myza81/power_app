@@ -1,12 +1,14 @@
 import pandas as pd
 
-from powerapp.applications.generator_response.calculation.mw_mvar import calculate_mw_mvar
+from applications.generator_response.calculation.mw_mvar import calculate_mw_mvar
 
 
 def get_riched_df(df, source_data):
-    if source_data == "phasor":
-        return phasor_data(df, source_data)
-    elif source_data == "ben":
+    if 'phasor' in source_data:
+        return phasor_data(df, 'phasor')
+    elif 'ben' in source_data:
+        return
+    elif 'comtrade' in source_data:
         return
 
 

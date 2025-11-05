@@ -1,5 +1,6 @@
 import streamlit as st 
-from applications.generator_response.data_serialization.read_data import (
+import pandas as pd
+from applications.generator_response.data_processing.read_data import (
     get_key_metric,
 )
 
@@ -20,31 +21,33 @@ def data_preview_fragment(df):
     st.dataframe(df.head(rows_to_display), width="content")
 
 
-def data_viewer():
+def data_viewer(raw_df: pd.DataFrame, correct_df: pd.DataFrame = None, missing_keywords: list = None):
     st.header("⚙️ Key Parameter Metrics")
     metric_display = ["frequency", "mw"]
 
-    (raw_df, correct_df) = st.session_state["current_file_data"]
-
-    for metric in metric_display:
-        result = get_key_metric(
-            df=correct_df,
-            metric=metric,
-            time_column="time (asia/singapore)",
-        )
-
-        if result:
-            col_f1, col_f2 = st.columns(2)
-            col_f1.metric(
-                f"Lowest {result.get('metric')}",
-                f"{result.get('lowest'):.3f} Hz",
-                f"{result.get('lowest_at_time')}",
+    if correct_df is None:
+        st.warning("❌ no metric column available in the data" )
+    
+    else:
+        for metric in metric_display:
+            result = get_key_metric(
+                df=correct_df,
+                metric=metric,
+                time_column="time (asia/singapore)",
             )
-            col_f2.metric(
-                f"Highest {result.get('metric')}",
-                f"{result.get('highest'):.3f} Hz",
-                f"{result.get('highest_at_time')}",
-            )
+
+            if result:
+                col_f1, col_f2 = st.columns(2)
+                col_f1.metric(
+                    f"Lowest {result.get('metric')}",
+                    f"{result.get('lowest'):.3f} Hz",
+                    f"{result.get('lowest_at_time')}",
+                )
+                col_f2.metric(
+                    f"Highest {result.get('metric')}",
+                    f"{result.get('highest'):.3f} Hz",
+                    f"{result.get('highest_at_time')}",
+                )            
 
     # --- Data Preview ---
     data_preview_fragment(raw_df)
