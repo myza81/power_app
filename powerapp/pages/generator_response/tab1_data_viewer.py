@@ -21,7 +21,7 @@ def data_preview_fragment(df):
     st.dataframe(df.head(rows_to_display), width="content")
 
 
-def data_viewer(raw_df: pd.DataFrame, correct_df: pd.DataFrame = None, missing_keywords: list = None):
+def data_viewer(raw_df: pd.DataFrame, correct_df: pd.DataFrame | None = None, missing_keywords: list | None = None):
     st.header("⚙️ Key Parameter Metrics")
     metric_display = ["frequency", "mw"]
 
