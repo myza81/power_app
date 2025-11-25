@@ -91,7 +91,6 @@ class LoadSheddingData:
         return group_list, quantum_grp_load
 
 
-
 if __name__ == "__main__":
 
     load_profile_path = "D:/myIjat/Job/1_Operation/Network/System_Defences/UFLS_UVLS/2025_Review/2025_psse_load_profile.xlsx"
@@ -108,6 +107,10 @@ if __name__ == "__main__":
     ufls = LoadSheddingData(
         load_profile=load_profile, masterlist_relay=masterlist_relay
     )
+
+    # all_load
+    all_load = ufls.masterlist_load
+    all_load.to_excel(r"C:/Users/fairizat/Desktop/masterlist.xlsx", index=False)
 
     # existing assigned
     grp_trip_list, quantum = ufls.assigned_quantum_filter_by_group_id(
@@ -138,6 +141,7 @@ if __name__ == "__main__":
     # print(geoloc_list)
     # print(subs_list)
     # print(ufls.quantum_assigned_ls)
-    print("Available load by subzone", avail_subzone)
-    print('Available load by Substation', avail_subs)
+    print(all_load)
+    # print("Available load by subzone", avail_subzone)
+    # print('Available load by Substation', avail_subs)
     # print('Available ls', ufls.available_quantum_ls)
