@@ -96,6 +96,8 @@ class SchemeReview:
         ).agg(lambda x: ", ".join(x.astype(str).unique()))
 
         return df_merged
+    
+
 
     # def quantum_stage_by_grpId(self) -> pd.DataFrame:
     #     """ Provide a list of quantum ls for each operating stage. """

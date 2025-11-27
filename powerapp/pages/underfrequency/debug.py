@@ -23,7 +23,7 @@ group_tripId = "nlai_proi_kjng_nuni"
 subzone = "KL"
 geo_loc = "KlangValley"
 substation = "TJID"
-stage = "stage_4"
+stage = "stage_3"
 
 pd.set_option("display.max_rows", None)
 pd.set_option("display.max_columns", None)
@@ -56,18 +56,37 @@ ls = LoadShedding(
     uvls_setting=uvls_setting,
 )
 
+def sort_by_stage(df, review_year, export_file_name):
+    df["sort_key"] = df[review_year].str.extract(r"stage_(\d+)").astype(int)
+    df_sorted = df.sort_values(by="sort_key", ascending=True)
+    df_sorted = df_sorted.drop(columns=["sort_key"]).reset_index(drop=True)
+    print(df_sorted)
+    df_sorted.to_excel(
+        rf"C:\Users\fairizat\Desktop\{export_file_name}.xlsx", index=False
+    )
+
+
 # all_load
 
 # print("substation with load", ls.masterlist_load.head(30))
-# print("Load by subs", ls.load_by_subs.head(30))
+# print("Load by subs", ls.load_by_subs)
+# mnemonic='TGLN'
+# print(f"Load for {mnemonic}", ls.find_subs_load(mnemonic=mnemonic))
+
 # print("Load by subs", ls.ufls.ls_active)
 # print("LS active filter by Delivery Point", ls.ufls.ls_active_by_dp)
 # print("LS active filter by Tripping Group", ls.ufls.ls_active_by_grpId)
+# sort_by_stage(ls.ufls.ls_active_by_dp, review_year, "ufls_2024_list")
 
+print(
+    f"list of ufls substation by stage {stage}",
+    ls.ufls.ls_active_by_stage(stage=stage),
+    f"with total load {ls.ufls.ls_active_by_stage(stage=stage)["Pload (MW)"].sum()}",
+)
 # print(
-#     f"list of ufls substation by stage {stage}",
-#     ls.ufls.ls_active_by_stage(stage=stage),
+#     f"UFLS {stage} with total load {ls.ufls.ls_active_by_stage(stage=stage)["Pload (MW)"].sum()}",
 # )
+# sort_by_stage(ls.ufls.ls_active_by_stage(stage=stage), review_year, "ufls_2025_stage1_list")
 
 # print(
 #     f"List ulfs assignment by location {geo_loc} is ",
@@ -94,7 +113,8 @@ ls = LoadShedding(
 
 # print(f"list of ufls all substation", ls.ufls.ls_active_by_dp)
 
-print(f"List of DN exclusion", ls.ufls.dn_excluded_list)
+# print(f"List of DN exclusion", ls.ufls.dn_excluded_list)
+# sort_by_stage(ls.ufls.dn_excluded_list, review_year, "DN_2025_exclusion_list")
 
 
 # print(

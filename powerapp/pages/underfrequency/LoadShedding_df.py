@@ -3,7 +3,6 @@ import numpy as np
 
 from .SchemeReview import SchemeReview
 
-
 class LoadShedding:
 
     def __init__(
@@ -92,3 +91,6 @@ class LoadShedding:
             substation_masterlist=substation_masterlist.copy(),
             ls_setting=ufls_setting.copy(),
         )
+
+    def find_subs_load(self, mnemonic):
+        return self.load_by_subs[self.load_by_subs["mnemonic"] == mnemonic]

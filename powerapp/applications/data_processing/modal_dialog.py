@@ -1,7 +1,7 @@
 import streamlit as st 
 import pandas as pd
 
-from applications.generator_response.data_processing.dataframe import get_riched_df
+from applications.data_processing.dataframe import get_riched_df
 
 SOURCE_METADATA = ["Phasor CSV", "BEN CSV", "Comtrade"]
 

@@ -8,12 +8,12 @@ home = st.Page(
     default=True,
 )
 page_1 = st.Page(
-    page="pages/generator_response/gen_response.py",
+    page="pages/generator_response/home_gen_response.py",
     title="Generator Response",
     icon=":material/solar_power:",
 )
 page_2 = st.Page(
-    page="pages/underfrequency/ufls.py",
+    page="pages/underfrequency/home_ufls.py",
     title="UFLS",
     icon=":material/lightning_stand:",
 )

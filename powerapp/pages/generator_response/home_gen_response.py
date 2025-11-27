@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-from applications.generator_response.data_processing.read_data import find_correct_header
-from applications.generator_response.data_processing.modal_dialog import add_metadata
+from applications.data_processing.read_data import find_correct_header
+from applications.data_processing.modal_dialog import add_metadata
 
 # import tab1_data_viewer, tab2_data_plotting
 from pages.generator_response.tab1_data_viewer import data_viewer

@@ -1,147 +1,42 @@
 import pandas as pd
+import os
+import sys
 
 class LoadSheddingData:
-    def __init__(
-        self, 
-        load_profile: pd.DataFrame, 
-        masterlist_relay: pd.DataFrame
-    ):
-        self.load_profile = load_profile
-        self.masterlist_relay = masterlist_relay
+    def __init__(self, data_dir="data"):
 
-        self.masterlist_load = self.masterlist_relay.merge(
-            self.load_profile,
-            left_on=["Mnemonic", "Assigned_Feeders"],
-            right_on=["Mnemonic", "Id"],
-            how="inner",
-        )[
-            [
-                "GM_Subzone",
-                "Geo_Region",
-                "Substation",
-                "Mnemonic",
-                "Assigned_Feeders",
-                "Pload (MW)",
-                "TripGroup_id",
-            ]
-        ]
-        self.assigned_ls = self.masterlist_load.loc[self.masterlist_load["TripGroup_id"].notna()]
-        self.quantum_assigned_ls = self.assigned_ls["Pload (MW)"].sum()
-        self.available_quantum_ls = self.available_quantum()
+        def get_path(filename):
+            # Assuming 'data' folder is next to the script, you might need
+            # to adjust the path based on your project structure.
+            return os.path.join(data_dir, filename)
 
-    def assigned_quantum_filter_by_group_id(self, group_id: str):
-        group_list = self.assigned_ls[self.assigned_ls["TripGroup_id"] == group_id]
-        quantum_grp_load = group_list["Pload (MW)"].sum()
-        print(f"Total Group Load for {group_id}: {quantum_grp_load} MW")
-        return group_list, quantum_grp_load
-
-    def assigned_quantum_filter_by_GMSubzone(self, subzone: str):
-        group_list = self.assigned_ls[self.assigned_ls["GM_Subzone"] == subzone]
-        quantum_grp_load = group_list["Pload (MW)"].sum()
-        print(f"Total Group Load for {subzone}: {quantum_grp_load} MW")
-        return group_list, quantum_grp_load
-
-    def assigned_quantum_filter_by_geo_loc(self, geo_loc: str):
-        group_list = self.assigned_ls[self.assigned_ls["Geo_Region"] == geo_loc]
-        quantum_grp_load = group_list["Pload (MW)"].sum()
-        print(f"Total Group Load for {geo_loc}: {quantum_grp_load} MW")
-        return group_list, quantum_grp_load
-
-    def assigned_quantum_filter_by_substation(self, substation: str):
-        group_list = self.assigned_ls[self.assigned_ls["Mnemonic"] == substation]
-        quantum_grp_load = group_list["Pload (MW)"].sum()
-        print(f"Total Group Load for {substation}: {quantum_grp_load} MW")
-        return group_list, quantum_grp_load
-
-    def available_quantum(self):
-        return (
-            self.masterlist_load.assign(
-                priority=self.masterlist_load["TripGroup_id"].notna()
-            )
-            .sort_values(
-                by=["Mnemonic", "Assigned_Feeders", "priority"],
-                ascending=[True, True, False],  # keep True (not NaN) first
-            )
-            .drop_duplicates(subset=["Mnemonic", "Assigned_Feeders"], keep="first")
-            .drop(columns="priority")
+        self.dn_excluded_list = read_ls_data(get_path("dn_exluded_list.xlsx"))
+        self.ufls_assignment = read_ls_data(get_path("ufls_assignment.xlsx"))
+        self.uvls_assignment = read_ls_data(get_path("uvls_assignment.xlsx"))
+        self.ls_load_local = read_ls_data(get_path("ls_load_local.xlsx"))
+        self.ls_load_pocket = read_ls_data(get_path("ls_load_pocket.xlsx"))
+        self.relay_location = read_ls_data(get_path("relay_location.xlsx"))
+        self.substation_masterlist = read_ls_data(
+            get_path("substation_masterlist.xlsx")
         )
-
-    def available_quantum_filter_by_GMSubzone(self, subzone: str):
-        group_list = self.available_quantum_ls[
-            self.available_quantum_ls["GM_Subzone"] == subzone
-        ]
-        quantum_grp_load = group_list["Pload (MW)"].sum()
-        print(f"Total Available Load for {subzone}: {quantum_grp_load} MW")
-        return group_list, quantum_grp_load
-
-    def available_quantum_filter_by_geo_loc(self, geo_loc: str):
-        group_list = self.available_quantum_ls[
-            self.available_quantum_ls["Geo_Region"] == geo_loc
-        ]
-        quantum_grp_load = group_list["Pload (MW)"].sum()
-        print(f"Total Available Load for {geo_loc}: {quantum_grp_load} MW")
-        return group_list, quantum_grp_load
-
-    def available_quantum_filter_by_substation(self, substation: str):
-        group_list = self.available_quantum_ls[
-            self.available_quantum_ls["Mnemonic"] == substation
-        ]
-        quantum_grp_load = group_list["Pload (MW)"].sum()
-        print(f"Total Available Load for {substation}: {quantum_grp_load} MW")
-        return group_list, quantum_grp_load
+        self.ufls_setting = read_ls_data(get_path("ufls_setting.xlsx"))
+        self.uvls_setting = read_ls_data(get_path("uvls_setting.xlsx"))
 
 
-if __name__ == "__main__":
+def read_ls_data(file_path):
+    try: 
+        return pd.read_excel(file_path)
+    except FileNotFoundError:
+        log_error(f"File not found: {file_path}")
+        return None
+    except Exception as e:
+        log_error(f"Error processing file '{file_path}': {str(e)}")
+        return None
 
-    load_profile_path = "D:/myIjat/Job/1_Operation/Network/System_Defences/UFLS_UVLS/2025_Review/2025_psse_load_profile.xlsx"
-    masterlist_relay_path = "D:/myIjat/Job/1_Operation/Network/System_Defences/UFLS_UVLS/2025_Review/db_masterlist_ls_relay.xlsx"
-    group_tripId = "nlai_proi_kjng_nuni"
-    subzone = "KL"
-    geo_loc = "KlangValley"
-    substation = 'TJID'
 
-    pd.set_option("display.max_rows", None)
+def log_error(message):
+    print(f"[ERROR] {message}", file=sys.stderr)
 
-    load_profile = pd.read_excel(load_profile_path)
-    masterlist_relay = pd.read_excel(masterlist_relay_path)
-    ufls = LoadSheddingData(
-        load_profile=load_profile, masterlist_relay=masterlist_relay
-    )
 
-    # all_load
-    all_load = ufls.masterlist_load
-    all_load.to_excel(r"C:/Users/fairizat/Desktop/masterlist.xlsx", index=False)
-
-    # existing assigned
-    grp_trip_list, quantum = ufls.assigned_quantum_filter_by_group_id(
-        group_id=group_tripId
-    )
-    gmsubzone_list, subzone_quantum = ufls.assigned_quantum_filter_by_GMSubzone(
-        subzone=subzone
-    )
-    geoloc_list, geoloc_quantum = ufls.assigned_quantum_filter_by_geo_loc(
-        geo_loc=geo_loc
-    )
-    subs_list, subs_quantum = ufls.assigned_quantum_filter_by_substation(
-        substation=substation
-    )
-
-    # available ls - assigned + non-assigned
-    avail_geoloc, geoloc_availquantum = ufls.available_quantum_filter_by_geo_loc(
-        geo_loc=geo_loc
-    )
-    avail_subzone, subzone_availquantum = ufls.available_quantum_filter_by_GMSubzone(
-        subzone=subzone
-    )
-    avail_subs, subs_availquantum = ufls.available_quantum_filter_by_substation(
-        substation=substation
-    )
-    # print(grp_trip_list)
-    # print(gmsubzone_list)
-    # print(geoloc_list)
-    # print(subs_list)
-    # print(ufls.quantum_assigned_ls)
-    print(all_load)
-    # print("Available load by subzone", avail_subzone)
-    # print('Available load by Substation', avail_subs)
-    # print('Available ls', ufls.available_quantum_ls)
+# data = LoadSheddingData()
+# print(data.substation_masterlist)

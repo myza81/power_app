@@ -1,6 +1,6 @@
 import streamlit as st 
 import pandas as pd
-from applications.generator_response.data_processing.read_data import (
+from applications.data_processing.read_data import (
     get_key_metric,
 )
 
