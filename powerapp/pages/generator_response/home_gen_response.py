@@ -49,6 +49,7 @@ if uploaded_file is not None:
             if isinstance(corrected_df, ValueError):
                 # Keyword not found → show warning but still continue
                 st.sidebar.error(f"⚠️ {corrected_df}")
+                
                 with tab1:
                     data_viewer(raw_df=raw_df)
 

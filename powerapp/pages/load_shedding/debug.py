@@ -1,6 +1,6 @@
 import pandas as pd
 
-from pages.underfrequency.LoadShedding_df import LoadShedding
+from applications.load_shedding.data_processing.LoadShedding import LoadShedding
 
 
 load_profile_2025 = "D:/myIjat/Job/1_Operation/Network/System_Defences/UFLS_UVLS/2025_Review/database/2025_load_profile.xlsx"
@@ -41,20 +41,23 @@ substation_masterlist = pd.read_excel(substation_masterlist)
 ufls_setting = pd.read_excel(ufls_setting)
 uvls_setting = pd.read_excel(uvls_setting)
 
-ls = LoadShedding(
-    review_year=review_year,
-    load_profile=load_profile,
-    ufls_assignment=ufls_assignment,
-    uvls_assignment=uvls_assignment,
-    ls_load_local=ls_load_local,
-    ls_load_pocket=ls_load_pocket,
-    dn_excluded_list=dn_excluded_list,
-    log_defeated=log_defeated,
-    relay_location=relay_location,
-    substation_masterlist=substation_masterlist,
-    ufls_setting=ufls_setting,
-    uvls_setting=uvls_setting,
-)
+
+print(ls_load_local["kV"].astype(str))
+
+# ls = LoadShedding(
+#     review_year=review_year,
+#     load_profile=load_profile,
+#     ufls_assignment=ufls_assignment,
+#     uvls_assignment=uvls_assignment,
+#     ls_load_local=ls_load_local,
+#     ls_load_pocket=ls_load_pocket,
+#     dn_excluded_list=dn_excluded_list,
+#     log_defeated=log_defeated,
+#     relay_location=relay_location,
+#     substation_masterlist=substation_masterlist,
+#     ufls_setting=ufls_setting,
+#     uvls_setting=uvls_setting,
+# )
 
 def sort_by_stage(df, review_year, export_file_name):
     df["sort_key"] = df[review_year].str.extract(r"stage_(\d+)").astype(int)
@@ -78,11 +81,11 @@ def sort_by_stage(df, review_year, export_file_name):
 # print("LS active filter by Tripping Group", ls.ufls.ls_active_by_grpId)
 # sort_by_stage(ls.ufls.ls_active_by_dp, review_year, "ufls_2024_list")
 
-print(
-    f"list of ufls substation by stage {stage}",
-    ls.ufls.ls_active_by_stage(stage=stage),
-    f"with total load {ls.ufls.ls_active_by_stage(stage=stage)["Pload (MW)"].sum()}",
-)
+# print(
+#     f"list of ufls substation by stage {stage}",
+#     ls.ufls.ls_active_by_stage(stage=stage),
+#     f"with total load {ls.ufls.ls_active_by_stage(stage=stage)["Pload (MW)"].sum()}",
+# )
 # print(
 #     f"UFLS {stage} with total load {ls.ufls.ls_active_by_stage(stage=stage)["Pload (MW)"].sum()}",
 # )

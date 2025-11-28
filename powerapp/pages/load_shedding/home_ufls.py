@@ -1,14 +1,23 @@
 import streamlit as st
 from applications.data_processing.read_data import read_raw_data
+from pages.load_shedding.tab1_data_viewer import ls_data_viewer
+from applications.load_shedding.data_processing.LoadShedding import (
+    # LoadShedding,
+    LS_Data,
+)
+
 
 st.set_page_config(layout="wide", page_title="UFLS")
 
 if "load_profile" not in st.session_state:
     st.session_state["load_profile"] = None
 
+if "ls_data" not in st.session_state:
+    st.session_state["ls_data"] = None
+
 # --- Side Bar --- #
 st.sidebar.header("📁 Upload Latest Load Profile.")
-load_profile_uploader = st.sidebar.file_uploader("", type=["csv", "xlsx", "xls"])
+load_profile_uploader = st.sidebar.file_uploader("Choose file", type=["csv", "xlsx", "xls"])
 
 # --- Main UI --- #
 st.title("Defense Scheme - Load Shedding")
@@ -20,6 +29,10 @@ if load_profile_uploader is not None:
     st.session_state["load_profile"] = load_profile
 
 if load_profile is not None:
+
+    ls_data = LS_Data(load_profile=load_profile)
+    st.session_state["ls_data"] = ls_data
+
     show_table = st.checkbox("**Show Load Profile Raw Data**", value=False)
     if show_table:
         max_rows = len(load_profile)
@@ -34,37 +47,8 @@ if load_profile is not None:
         st.dataframe(load_profile.head(rows_to_display), width="content")
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        ["UFLS", "UVLS", "EMLS", "Critical Load List", "Reviewer"]
+        ["Data Viewer", "UVLS", "EMLS", "Critical Load List", "Reviewer"]
     )
 
-    if load_profile is not None:
-
-        with tab1:
-            col1, col2, col3, col4, col5 = st.columns(5)
-
-            with col1:
-                review_year = st.selectbox(label="UFLS Review", options = ["2024", "2025"])
-
-            with col2:
-                zone_loc = st.selectbox(
-                    label="Zone Location",
-                    options=["All", "South", "KlangValley", "North", "East"],
-                )
-
-            with col3:
-                gm_subzone = st.selectbox(
-                    label="GM Subzone",
-                    options=["All", "South", "KlangValley", "North", "East"],
-                )
-
-            with col4:
-                stage = st.selectbox(
-                    label="Operating Stage",
-                    options=["All", "Stage 1", "Stage 2", "Stage 3", "Stage 4"],
-                )
-
-            with col5:
-                trip_assignment = st.selectbox(
-                    label="Tripping Assignment",
-                    options=["All", "Local Load", "Pocket Load"],
-                )
+    with tab1:
+        ls_data_viewer()
