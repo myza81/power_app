@@ -35,6 +35,19 @@ if load_profile is not None:
 
     show_table = st.checkbox("**Show Load Profile Raw Data**", value=False)
     if show_table:
+        total_mw = load_profile["Pload (MW)"].sum()
+        total_mvar = load_profile["Qload (Mvar)"].sum()
+
+        col_f1, col_f2 = st.columns(2)
+        col_f1.metric(
+            f"Active Power MD",
+            f"{int(total_mw):,} MW",
+        )
+        # col_f2.metric(
+        #     f"Reactive Power MD",
+        #     f"{int(total_mvar):,} MVar",
+        # )
+
         max_rows = len(load_profile)
         rows_to_display = st.slider(
             "Select number of rows to display:",

@@ -115,4 +115,4 @@ def ls_data_viewer() -> None:
     )
 
     st.subheader("Active LS Assignment")
-    st.write(load_shed.ls_active())
+    st.write(load_shed.ls_active_with_metadata())

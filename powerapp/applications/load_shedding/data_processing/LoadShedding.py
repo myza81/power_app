@@ -89,13 +89,13 @@ class LoadShedding(LS_Data):
         load["local_trip_id"] = load["local_trip_id"].fillna(load["group_trip_id"])
         return load
 
-    def mlist_load_by_subs(self):
+    def mlist_load_grpby_tripId(self):
         return self.mlist_load().groupby(
             ["mnemonic", "local_trip_id", "group_trip_id"], as_index=False
         )[["Pload (MW)", "Qload (Mvar)"]].sum()
 
     def find_subs_load(self, mnemonic: str) -> pd.DataFrame:
-        substation_load = self.mlist_load_by_subs()
+        substation_load = self.mlist_load_grpby_tripId()
         return substation_load[substation_load["mnemonic"] == mnemonic]
 
     def ls_active(self) -> pd.DataFrame:
@@ -111,9 +111,19 @@ class LoadShedding(LS_Data):
             active["sort_key"] = (
                 active[self.review_year].str.extract(r"stage_(\d+)").astype(int)
             )
-            df_sorted = active.sort_values(by="sort_key", ascending=True)
-            df_sorted = df_sorted.drop(columns=["sort_key"]).reset_index(drop=True)
+            ls_sorted = active.sort_values(by="sort_key", ascending=True)
+            ls_sorted = ls_sorted.drop(columns=["sort_key"]).reset_index(drop=True)
 
-            return df_sorted
+            master_load = self.mlist_load_grpby_tripId()
+            ls_w_load = pd.merge(ls_sorted, master_load, on="group_trip_id", how="left")
 
+            return ls_w_load
+
+        return pd.DataFrame()
+
+    def ls_active_with_metadata(self):
+        if self.substation_masterlist is not None:
+            ls_active = self.ls_active()
+            ls_meta = pd.merge(ls_active, self.substation_masterlist, on="mnemonic", how="left")
+            return ls_meta
         return pd.DataFrame()
