@@ -162,50 +162,29 @@ class LoadShedding(LS_Data):
         else:
             ls_merged = selected_scheme_dfs[0]
 
-        print(ls_merged)
-        # print(ufls_assignment)
+        master_load = self.mlist_load_grpby_tripId()
+        ls_w_load = pd.merge(ls_merged, master_load, on="group_trip_id", how="left")
 
-        # if self.scheme == "UVLS":
-        #     ls_assignment = self.uvls_assignment
+        return ls_w_load
 
-        # if ls_assignment is not None:
-        #     mask = ~ls_assignment[self.review_year].isin(["nan", "#na"])
-        #     active = ls_assignment.loc[
-        #         mask, ["group_trip_id", self.review_year]
-        #     ]
-        #     active["sort_key"] = (
-        #         active[self.review_year].str.extract(r"stage_(\d+)").astype(int)
-        #     )
-        #     ls_sorted = active.sort_values(by="sort_key", ascending=True)
-        #     ls_sorted = ls_sorted.drop(columns=["sort_key"]).reset_index(drop=True)
+    def filtered_data(self, filters):
+        ls_w_load = self.ls_list().copy()
 
-        #     master_load = self.mlist_load_grpby_tripId()
-        #     ls_w_load = pd.merge(ls_sorted, master_load, on="group_trip_id", how="left")
+        if ls_w_load.empty:
+            return "Warning: No schemes selected."
+        
+        if self.subs_meta is not None:
+            ls_w_load = pd.merge(ls_w_load, self.subs_meta, on="mnemonic", how="left")
 
-        #     return ls_w_load
+        for col, selected in filters.items():
+            if selected is None or selected == []:
+                continue
+            if isinstance(selected, (list, tuple, set)):
+                ls_w_load = ls_w_load[ls_w_load[col].isin(selected)]
+            else:
+                ls_w_load = ls_w_load[ls_w_load[col] == selected]
+        
+        if ls_w_load.empty:
+            return "Filtering resulted in an empty DataFrame."
 
-        return ls_merged
-
-    # def filtered_data(self, filters):
-    #     filtered_df = self.ls_active().copy()
-    #     # print(filtered_df)
-
-    #     for col, selected in filters.items():
-    #         # print(col)
-    #         # print(selected)
-
-    #         if selected is None or selected == []:
-    #             continue
-    #         if isinstance(selected, (list, tuple, set)):
-    #             filtered_df = filtered_df[filtered_df[col].isin(selected)]
-    #         else:
-    #             # single value
-    #             filtered_df = filtered_df[filtered_df[col] == selected]
-
-    #     if self.subs_meta is not None:
-    #         # ls_active = self.ls_active()
-    #         filtered_df = pd.merge(
-    #             filtered_df, self.subs_meta, on="mnemonic", how="left"
-    #         )
-
-    #     return filtered_df
+        return ls_w_load

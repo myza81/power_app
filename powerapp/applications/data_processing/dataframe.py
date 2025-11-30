@@ -22,3 +22,15 @@ def phasor_data(df, source_data):
     clean_df['Mvar'] = calc.get('Mvar')
 
     return clean_df
+
+
+def df_search_filter(df: pd.DataFrame, query: str) -> pd.DataFrame:
+    if not query:
+        return df
+
+    df_str = df.astype(str)
+    mask = df_str.apply(
+        lambda row: row.str.contains(query, case=False, na=False).any(), axis=1
+    )
+
+    return df[mask]

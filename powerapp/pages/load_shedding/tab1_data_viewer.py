@@ -7,28 +7,7 @@ from applications.load_shedding.data_processing.LoadShedding import (
     LS_Data,
 )
 from applications.load_shedding.data_processing.helper import columns_list
-
-
-# def columns_list(
-#     df: Optional[pd.DataFrame],
-#     unwanted_el: Optional[Sequence[str]] = None,
-#     add_el: Optional[Sequence[Tuple[int, str]]] = None,
-# ) -> List[str]:
-
-#     if df is None:
-#         return []
-
-#     cols = df.columns.tolist()
-
-#     if unwanted_el:
-#         cols = [c for c in cols if c not in unwanted_el]
-
-#     if add_el:
-#         for idx, name in add_el:
-#             idx = max(0, min(idx, len(cols)))
-#             cols.insert(idx, name)
-
-#     return cols
+from applications.data_processing.dataframe import df_search_filter
 
 
 def column_data_list(
@@ -116,14 +95,23 @@ def ls_data_viewer() -> None:
         load_profile=st.session_state["load_profile"],
     )
 
-    # filtered_data = load_shed.filtered_data(
-    #     filters={
-    #         review_year: stage_selected,
-    #         "mnemonic": [],
-    #         "geo_region": zone_selected,
-    #         "gm_subzone": subzone_selected,
-    #     }
-    # )
+    filtered_data = load_shed.filtered_data(
+        filters={
+            review_year: stage_selected,
+            "mnemonic": [],
+            "geo_region": zone_selected,
+            "gm_subzone": subzone_selected,
+        }
+    )
 
-    st.subheader("Active LS Assignment")
-    st.write(load_shed.ls_list())
+    st.subheader("Active Load Sheddding Assignment")
+    if isinstance(filtered_data, pd.DataFrame):
+        search_query = st.text_input(
+                label="Search for a Keyword:",
+                placeholder="Enter your search term here...",  # Optional hint text
+                key="search_box",  # Optional unique key
+            )
+        filtered_df = df_search_filter(filtered_data, search_query)
+        st.dataframe(filtered_df)
+    else:
+        st.write(filtered_data)

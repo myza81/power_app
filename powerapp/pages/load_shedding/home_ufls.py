@@ -1,10 +1,12 @@
 import streamlit as st
+import pandas as pd
 from applications.data_processing.read_data import read_raw_data
 from pages.load_shedding.tab1_data_viewer import ls_data_viewer
 from applications.load_shedding.data_processing.LoadShedding import (
     # LoadShedding,
     LS_Data,
 )
+from applications.data_processing.dataframe import df_search_filter
 
 
 st.set_page_config(layout="wide", page_title="UFLS")
@@ -48,19 +50,35 @@ if load_profile is not None:
         #     f"{int(total_mvar):,} MVar",
         # )
 
-        max_rows = len(load_profile)
-        rows_to_display = st.slider(
-            "Select number of rows to display:",
-            min_value=5,
-            max_value=max_rows,
-            value=min(5, max_rows),
-            step=1,
-            help="Use this slider to change how many rows of the raw data are visible.",
+        search_query = st.text_input(
+            label="Search for a Keyword:",
+            placeholder="Enter your search term here...",  # Optional hint text
+            key="search_box",  # Optional unique key
         )
-        st.dataframe(load_profile.head(rows_to_display), width="content")
+        filtered_df = df_search_filter(load_profile, search_query)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        ["Data Viewer", "UVLS", "EMLS", "Critical Load List", "Reviewer"]
+        if filtered_df.empty and search_query:
+            st.warning(f"No results found for the query: **'{search_query}'**")
+            max_rows = 0
+            rows_to_display = 0 # Ensure slider value is handled gracefully
+        else:
+            max_rows = len(filtered_df)
+            rows_to_display = st.slider(
+                "Select number of rows to display:",
+                min_value=1,
+                max_value=max_rows,
+                value=min(5, max_rows) if max_rows > 1 else 1, 
+                step=1,
+                help=f"Currently filtering from {len(load_profile)} total rows. {max_rows} rows match the search query.",
+            )
+
+            st.dataframe(
+                filtered_df.head(rows_to_display), 
+                use_container_width=True
+            )
+
+    tab1, tab2, tab3 = st.tabs(
+        ["Data Viewer", "Critical Load List", "Reviewer"]
     )
 
     with tab1:
