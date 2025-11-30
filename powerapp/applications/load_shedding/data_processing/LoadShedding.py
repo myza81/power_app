@@ -1,9 +1,11 @@
 import os
 import sys
 import pandas as pd
-
-from typing import Optional
+import numpy as np
+from functools import reduce
+from typing import Optional, Dict, List
 from .SchemeReview import SchemeReview
+from applications.load_shedding.data_processing.helper import columns_list
 
 
 def read_ls_data(file_path: str) -> Optional[pd.DataFrame]:
@@ -30,6 +32,38 @@ def get_path(filename: str, data_dir: str = "data") -> str:
     return os.path.join(data_dir, filename)
 
 
+def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
+
+    ls_assignment = (
+        ls_df.copy() if ls_df is not None else pd.DataFrame()
+    )
+
+    review_year_list = columns_list(ls_assignment, unwanted_el=["group_trip_id"])
+    
+    latest_review = review_year
+    
+    if latest_review not in review_year_list:
+        review_year_list.sort(reverse=True)
+        latest_review = review_year_list[0]
+
+    ls_assignment.rename(columns={latest_review: scheme}, inplace=True)
+    # print(ls_assignment)
+
+    ls_review = ls_assignment[["group_trip_id", scheme]]
+
+    ls_review = ~ls_review[scheme].isin(["nan", "#na"])
+    ls_review_active = ls_assignment.loc[ls_review, ["group_trip_id", scheme]]
+
+    ls_review_active["sort_key"] = (
+        ls_review_active[scheme].str.extract(r"stage_(\d+)").astype(int)
+    )
+
+    ls_sorted = ls_review_active.sort_values(by="sort_key", ascending=True)
+    ls_sorted = ls_sorted.drop(columns=["sort_key"]).reset_index(drop=True)
+
+    return pd.DataFrame(ls_sorted)
+
+
 class LS_Data:
     def __init__(self, load_profile: pd.DataFrame, data_dir: str = "data") -> None:
         self.load_profile = load_profile.copy()
@@ -37,41 +71,37 @@ class LS_Data:
         self.ufls_assignment = read_ls_data(get_path("ufls_assignment.xlsx", data_dir))
         if self.ufls_assignment is not None:
             self.ufls_assignment.columns = self.ufls_assignment.columns.astype(str)
-
         self.uvls_assignment = read_ls_data(get_path("uvls_assignment.xlsx", data_dir))
         if self.uvls_assignment is not None:
             self.uvls_assignment.columns = self.uvls_assignment.columns.astype(str)
-        self.ls_load_local = read_ls_data(get_path("ls_load_local.xlsx", data_dir))
-        self.ls_load_pocket = read_ls_data(get_path("ls_load_pocket.xlsx", data_dir))
-        self.relay_location = read_ls_data(get_path("relay_location.xlsx", data_dir))
-        self.substation_masterlist = read_ls_data(
-            get_path("substation_masterlist.xlsx", data_dir)
-        )
+        self.ls_incomer = read_ls_data(get_path("incomer_dp.xlsx", data_dir))
+        self.ls_hvcb = read_ls_data(get_path("hvcb_dp.xlsx", data_dir))
+        self.pocket_rly_loc = read_ls_data(get_path("hvcb_rly.xlsx", data_dir))
+        self.subs_meta = read_ls_data(get_path("subs_metadata.xlsx", data_dir))
         self.ufls_setting = read_ls_data(get_path("ufls_setting.xlsx", data_dir))
         self.uvls_setting = read_ls_data(get_path("uvls_setting.xlsx", data_dir))
-        self.log_defeat = read_ls_data(get_path("log_defeated_relay.xlsx", data_dir))
+        self.log_defeat = read_ls_data(get_path("log_defeated.xlsx", data_dir))
         self.emls_assignment = read_ls_data(get_path("emls_assignment.xlsx", data_dir))
+        self.available_ls = read_ls_data(get_path("available_ls.xlsx", data_dir))
 
 
 class LoadShedding(LS_Data):
 
     def __init__(
-        self, review_year: str, scheme: str, load_profile: pd.DataFrame
+        self, review_year: str, scheme: list[str], load_profile: pd.DataFrame
     ) -> None:
 
         super().__init__(load_profile)
         self.review_year = review_year
         self.scheme = scheme
 
-    def combined_all_load(self) -> pd.DataFrame:
-        frames = [
-            df for df in (self.ls_load_local, self.ls_load_pocket) if df is not None
-        ]
+    def ls_combined(self) -> pd.DataFrame:
+        frames = [df for df in (self.ls_incomer, self.ls_hvcb) if df is not None]
         return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
     def mlist_load(self) -> pd.DataFrame:
         load = pd.merge(
-            self.combined_all_load(),
+            self.ls_combined(),
             self.load_profile,
             left_on=["mnemonic", "feeder_id"],
             right_on=["Mnemonic", "Id"],
@@ -98,32 +128,84 @@ class LoadShedding(LS_Data):
         substation_load = self.mlist_load_grpby_tripId()
         return substation_load[substation_load["mnemonic"] == mnemonic]
 
-    def ls_active(self) -> pd.DataFrame:
-        ls_assignment = self.ufls_assignment
-        if self.scheme == "UVLS":
-            ls_assignment = self.uvls_assignment
+    def ls_list(self) -> pd.DataFrame:
+        assignments: Dict[str, pd.DataFrame] = {
+            "UFLS": pd.DataFrame(self.ufls_assignment),
+            "UVLS": pd.DataFrame(self.uvls_assignment),
+            "EMLS": pd.DataFrame(self.emls_assignment),
+        }
 
-        if ls_assignment is not None:
-            mask = ~ls_assignment[self.review_year].isin(["nan", "#na"])
-            active = ls_assignment.loc[
-                mask, ["group_trip_id", self.review_year]
-            ]
-            active["sort_key"] = (
-                active[self.review_year].str.extract(r"stage_(\d+)").astype(int)
+        processed_schemes: Dict[str, pd.DataFrame] = {
+            scheme_name: ls_active(
+                df, 
+                review_year=self.review_year, 
+                scheme=scheme_name
             )
-            ls_sorted = active.sort_values(by="sort_key", ascending=True)
-            ls_sorted = ls_sorted.drop(columns=["sort_key"]).reset_index(drop=True)
+            for scheme_name, df in assignments.items()
+        }
 
-            master_load = self.mlist_load_grpby_tripId()
-            ls_w_load = pd.merge(ls_sorted, master_load, on="group_trip_id", how="left")
+        selected_scheme_dfs: List[pd.DataFrame] = [
+            processed_schemes[ls_scheme] for ls_scheme in self.scheme
+        ]
 
-            return ls_w_load
+        if not selected_scheme_dfs:
+            print("Warning: No schemes selected or processed.")
+            return pd.DataFrame()
 
-        return pd.DataFrame()
+        if len(selected_scheme_dfs) > 1:
+            ls_merged = reduce(
+                lambda left, right: pd.merge(
+                    left, right, on="group_trip_id", how="outer"
+                ),
+                selected_scheme_dfs,
+            )
+        else:
+            ls_merged = selected_scheme_dfs[0]
 
-    def ls_active_with_metadata(self):
-        if self.substation_masterlist is not None:
-            ls_active = self.ls_active()
-            ls_meta = pd.merge(ls_active, self.substation_masterlist, on="mnemonic", how="left")
-            return ls_meta
-        return pd.DataFrame()
+        print(ls_merged)
+        # print(ufls_assignment)
+
+        # if self.scheme == "UVLS":
+        #     ls_assignment = self.uvls_assignment
+
+        # if ls_assignment is not None:
+        #     mask = ~ls_assignment[self.review_year].isin(["nan", "#na"])
+        #     active = ls_assignment.loc[
+        #         mask, ["group_trip_id", self.review_year]
+        #     ]
+        #     active["sort_key"] = (
+        #         active[self.review_year].str.extract(r"stage_(\d+)").astype(int)
+        #     )
+        #     ls_sorted = active.sort_values(by="sort_key", ascending=True)
+        #     ls_sorted = ls_sorted.drop(columns=["sort_key"]).reset_index(drop=True)
+
+        #     master_load = self.mlist_load_grpby_tripId()
+        #     ls_w_load = pd.merge(ls_sorted, master_load, on="group_trip_id", how="left")
+
+        #     return ls_w_load
+
+        return ls_merged
+
+    # def filtered_data(self, filters):
+    #     filtered_df = self.ls_active().copy()
+    #     # print(filtered_df)
+
+    #     for col, selected in filters.items():
+    #         # print(col)
+    #         # print(selected)
+
+    #         if selected is None or selected == []:
+    #             continue
+    #         if isinstance(selected, (list, tuple, set)):
+    #             filtered_df = filtered_df[filtered_df[col].isin(selected)]
+    #         else:
+    #             # single value
+    #             filtered_df = filtered_df[filtered_df[col] == selected]
+
+    #     if self.subs_meta is not None:
+    #         # ls_active = self.ls_active()
+    #         filtered_df = pd.merge(
+    #             filtered_df, self.subs_meta, on="mnemonic", how="left"
+    #         )
+
+    #     return filtered_df

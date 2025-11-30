@@ -6,28 +6,29 @@ from applications.load_shedding.data_processing.LoadShedding import (
     LoadShedding,
     LS_Data,
 )
+from applications.load_shedding.data_processing.helper import columns_list
 
 
-def columns_list(
-    df: Optional[pd.DataFrame],
-    unwanted_el: Optional[Sequence[str]] = None,
-    add_el: Optional[Sequence[Tuple[int, str]]] = None,
-) -> List[str]:
-    
-    if df is None:
-        return []
+# def columns_list(
+#     df: Optional[pd.DataFrame],
+#     unwanted_el: Optional[Sequence[str]] = None,
+#     add_el: Optional[Sequence[Tuple[int, str]]] = None,
+# ) -> List[str]:
 
-    cols = df.columns.tolist()
+#     if df is None:
+#         return []
 
-    if unwanted_el:
-        cols = [c for c in cols if c not in unwanted_el]
+#     cols = df.columns.tolist()
 
-    if add_el:
-        for idx, name in add_el:
-            idx = max(0, min(idx, len(cols)))
-            cols.insert(idx, name)
+#     if unwanted_el:
+#         cols = [c for c in cols if c not in unwanted_el]
 
-    return cols
+#     if add_el:
+#         for idx, name in add_el:
+#             idx = max(0, min(idx, len(cols)))
+#             cols.insert(idx, name)
+
+#     return cols
 
 
 def column_data_list(
@@ -61,46 +62,47 @@ def ls_data_viewer() -> None:
     ls_data = st.session_state["ls_data"]
     ufls_assignment = ls_data.ufls_assignment
     ufls_setting = ls_data.ufls_setting
-    subs_masterlist = ls_data.substation_masterlist
+    subs_masterlist = ls_data.subs_meta
 
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1_1, col1_2, col1_3 = st.columns(3)
+    col2_1, col2_2, col2_3 = st.columns(3)
 
-    with col1:
-        ls_scheme = st.selectbox(label="Scheme", options=["UFLS", "UVLS", "EMLS"])
-
-    with col2:
+    with col1_1:
         review_year_list = columns_list(ufls_assignment, unwanted_el=["group_trip_id"])
         review_year_list.sort(reverse=True)
         review_year = st.selectbox(label="UFLS Review", options=review_year_list)
 
-    with col3:
+    with col1_2:
+        ls_scheme = st.multiselect(label="Scheme", options=["UFLS", "UVLS", "EMLS"], default="UFLS")
+
+    with col1_3:
         zone = column_data_list(
             subs_masterlist,
             "geo_region",
-            add_el=[{"idx": 0, "data": "All"}],
         )
-        zone_loc = st.selectbox(label="Zone Location", options=zone)
+        zone_selected = st.multiselect(label="Zone Location", options=zone)
 
-    with col4:
+    with col2_1:
         subzone = column_data_list(
             subs_masterlist,
             "gm_subzone",
-            add_el=[{"idx": 0, "data": "All"}],
         )
-        gm_subzone = st.selectbox(label="GM Subzone", options=subzone)
+        subzone_selected = st.multiselect(label="GM Subzone", options=subzone)
 
-    with col5:
+    with col2_2:
         ufls_staging_list = column_data_list(
             ufls_setting,
             "stage",
-            add_el=[{"idx": 0, "data": "All"}],
+            # add_el=[{"idx": 0, "data": "All"}],
         )
-        stage = st.selectbox(label="Operating Stage", options=ufls_staging_list)
+        stage_selected = st.multiselect(
+            label="Operating Stage", options=ufls_staging_list
+        )
 
-    with col6:
-        trip_assignment = st.selectbox(
+    with col2_3:
+        trip_assignment = st.multiselect(
             label="Tripping Assignment",
-            options=["All", "Local Load", "Pocket Load"],
+            options=["Local Load", "Pocket Load"],
         )
 
     # Main logic
@@ -110,9 +112,18 @@ def ls_data_viewer() -> None:
 
     load_shed = LoadShedding(
         review_year=review_year,
-        load_profile=st.session_state["load_profile"],
         scheme=ls_scheme,
+        load_profile=st.session_state["load_profile"],
     )
 
+    # filtered_data = load_shed.filtered_data(
+    #     filters={
+    #         review_year: stage_selected,
+    #         "mnemonic": [],
+    #         "geo_region": zone_selected,
+    #         "gm_subzone": subzone_selected,
+    #     }
+    # )
+
     st.subheader("Active LS Assignment")
-    st.write(load_shed.ls_active_with_metadata())
+    st.write(load_shed.ls_list())
