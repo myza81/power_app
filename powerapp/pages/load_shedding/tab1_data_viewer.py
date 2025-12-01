@@ -37,7 +37,7 @@ def column_data_list(
 
 
 def ls_data_viewer() -> None:
-    # ls_data = LS_Data(load_profile=load_profile)
+
     ls_data = st.session_state["ls_data"]
     ufls_assignment = ls_data.ufls_assignment
     ufls_setting = ls_data.ufls_setting
@@ -72,7 +72,6 @@ def ls_data_viewer() -> None:
         ufls_staging_list = column_data_list(
             ufls_setting,
             "stage",
-            # add_el=[{"idx": 0, "data": "All"}],
         )
         stage_selected = st.multiselect(
             label="Operating Stage", options=ufls_staging_list
@@ -108,10 +107,14 @@ def ls_data_viewer() -> None:
     if isinstance(filtered_data, pd.DataFrame):
         search_query = st.text_input(
                 label="Search for a Keyword:",
-                placeholder="Enter your search term here...",  # Optional hint text
-                key="search_box",  # Optional unique key
+                placeholder="Enter your search keyword here...", 
+                key="search_box",
             )
         filtered_df = df_search_filter(filtered_data, search_query)
         st.dataframe(filtered_df)
     else:
         st.write(filtered_data)
+
+    # data viewer temp
+    data = LS_Data(load_profile=st.session_state["load_profile"])
+    st.write(load_shed.mlist_load())

@@ -127,3 +127,12 @@ def get_key_metric(df, metric, time_column):
         }
 
     return {}
+
+
+def find_project_root(start_path, folder_name):
+    for parent in start_path.parents:
+        if parent.name == folder_name:
+            return parent
+    raise FileNotFoundError(
+        f"Could not find a parent directory named '{folder_name}' from {start_path}"
+    )

@@ -34,14 +34,12 @@ def get_path(filename: str, data_dir: str = "data") -> str:
 
 def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
 
-    ls_assignment = (
-        ls_df.copy() if ls_df is not None else pd.DataFrame()
-    )
+    ls_assignment = ls_df.copy() if ls_df is not None else pd.DataFrame()
 
     review_year_list = columns_list(ls_assignment, unwanted_el=["group_trip_id"])
-    
+
     latest_review = review_year
-    
+
     if latest_review not in review_year_list:
         review_year_list.sort(reverse=True)
         latest_review = review_year_list[0]
@@ -109,8 +107,10 @@ class LoadShedding(LS_Data):
         )[
             [
                 "mnemonic",
+                "kV",
                 "local_trip_id",
                 "feeder_id",
+                "breaker_id",
                 "group_trip_id",
                 "Pload (MW)",
                 "Qload (Mvar)",
@@ -120,13 +120,20 @@ class LoadShedding(LS_Data):
         return load
 
     def mlist_load_grpby_tripId(self):
-        return self.mlist_load().groupby(
-            ["mnemonic", "local_trip_id", "group_trip_id"], as_index=False
-        )[["Pload (MW)", "Qload (Mvar)"]].sum()
-
-    def find_subs_load(self, mnemonic: str) -> pd.DataFrame:
-        substation_load = self.mlist_load_grpby_tripId()
-        return substation_load[substation_load["mnemonic"] == mnemonic]
+        return (
+            self.mlist_load()
+            .groupby(
+                ["mnemonic", "kV", "local_trip_id", "group_trip_id"],
+                as_index=False,
+            )
+            .agg(
+                {
+                    "Pload (MW)": "sum",
+                    "Qload (Mvar)": "sum",
+                    "breaker_id": lambda x: ", ".join(x.astype(str).unique()),
+                }
+            )
+        )
 
     def ls_list(self) -> pd.DataFrame:
         assignments: Dict[str, pd.DataFrame] = {
@@ -136,11 +143,7 @@ class LoadShedding(LS_Data):
         }
 
         processed_schemes: Dict[str, pd.DataFrame] = {
-            scheme_name: ls_active(
-                df, 
-                review_year=self.review_year, 
-                scheme=scheme_name
-            )
+            scheme_name: ls_active(df, review_year=self.review_year, scheme=scheme_name)
             for scheme_name, df in assignments.items()
         }
 
@@ -172,7 +175,7 @@ class LoadShedding(LS_Data):
 
         if ls_w_load.empty:
             return "Warning: No schemes selected."
-        
+
         if self.subs_meta is not None:
             ls_w_load = pd.merge(ls_w_load, self.subs_meta, on="mnemonic", how="left")
 
@@ -183,7 +186,7 @@ class LoadShedding(LS_Data):
                 ls_w_load = ls_w_load[ls_w_load[col].isin(selected)]
             else:
                 ls_w_load = ls_w_load[ls_w_load[col] == selected]
-        
+
         if ls_w_load.empty:
             return "Filtering resulted in an empty DataFrame."
 
