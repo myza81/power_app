@@ -94,8 +94,11 @@ class LoadShedding(LS_Data):
         self.scheme = scheme
 
     def ls_combined(self) -> pd.DataFrame:
-        frames = [df for df in (self.ls_incomer, self.ls_hvcb) if df is not None]
-        return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+        incomer_dp = self.ls_incomer if self.ls_incomer is not None else pd.DataFrame()
+        incomer_dp["ls_dp"] = "incomer"
+        hvcb_dp = self.ls_hvcb if self.ls_hvcb is not None else pd.DataFrame()
+        hvcb_dp["ls_dp"] = "pocket"
+        return pd.concat([incomer_dp, hvcb_dp], ignore_index=True)
 
     def mlist_load(self) -> pd.DataFrame:
         load = pd.merge(
@@ -114,6 +117,7 @@ class LoadShedding(LS_Data):
                 "group_trip_id",
                 "Pload (MW)",
                 "Qload (Mvar)",
+                "ls_dp",
             ]
         ]
         load["local_trip_id"] = load["local_trip_id"].fillna(load["group_trip_id"])
@@ -123,7 +127,7 @@ class LoadShedding(LS_Data):
         return (
             self.mlist_load()
             .groupby(
-                ["mnemonic", "kV", "local_trip_id", "group_trip_id"],
+                ["mnemonic", "kV", "local_trip_id", "group_trip_id", "ls_dp"],
                 as_index=False,
             )
             .agg(
@@ -181,6 +185,8 @@ class LoadShedding(LS_Data):
 
         for col, selected in filters.items():
             if selected is None or selected == []:
+                continue
+            if col not in ls_w_load.columns:
                 continue
             if isinstance(selected, (list, tuple, set)):
                 ls_w_load = ls_w_load[ls_w_load[col].isin(selected)]

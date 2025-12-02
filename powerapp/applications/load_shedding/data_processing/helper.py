@@ -22,3 +22,19 @@ def columns_list(
             cols.insert(idx, name)
 
     return cols
+
+
+# def load_profile_enrichment(df):
+#     state = {
+#         "North": ["Kedah", "Langkawi", "Perlis", "P Pinang", "Perak"],
+#         "KlangValley": ["WPKL", "Selangor"],
+#         "South": ["NS", "Johor", "Melaka"],
+#         "East": ["Kelantan", "TGanu", "Pahang"]
+#     }
+#     zone_state = {}
+#     for zone, states in state.items():
+#         for state in states:
+#             zone_state[state.upper()] = zone
+#     df["Zone"] = df["Zone Name"].str.upper().map(zone_state)
+#     return df
+
