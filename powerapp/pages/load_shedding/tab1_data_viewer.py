@@ -12,6 +12,7 @@ from applications.load_shedding.data_processing.load_profile import (
     df_search_filter,
     # df_stage_filter,
 )
+from pages.load_shedding.helper import display_ls_metrics
 
 
 def column_data_list(
@@ -98,15 +99,6 @@ def ls_data_viewer() -> None:
         load_profile=load_profile_df,
     )
 
-    # ALL_STAGE_COLS = ["UFLS", "UVLS", "EMLS"]
-    # filters_dict = {
-    #     "mnemonic": [],
-    #     "zone": zone_selected,
-    #     "gm_subzone": subzone_selected,
-    # }
-    # for col in ALL_STAGE_COLS:
-    #     filters_dict[col] = stage_selected
-
     filtered_data = load_shed.filtered_data(
         filters={
             "UFLS": stage_selected,
@@ -128,48 +120,18 @@ def ls_data_viewer() -> None:
         filtered_df = df_search_filter(filtered_data, search_query)
         st.dataframe(filtered_df)
 
-        col3_1, col3_2 = st.columns(2)
-        total_mw = load_profile_df["Pload (MW)"].sum()
-        total_mw_ls = filtered_data.loc[:, "Pload (MW)"].sum()
-        percentage_ls = int((total_mw_ls/total_mw)* 100)
-
-        north_ls = load_profile_metric(filtered_data, "North")
-        kvalley_ls = load_profile_metric(filtered_data, "KlangValley")
-        south_ls = load_profile_metric(filtered_data, "South")
-        east_ls = load_profile_metric(filtered_data, "East")
-
-        with col3_1:
-            st.metric(
-                label="Total Load Shedding",
-                value=f"{int(total_mw_ls):,} MW",
-            )
-            st.metric(
-                label="% of Max Demand",
-                value=f"{percentage_ls:.0f}%",
-            )
-        with col3_2:
-            col3_2a, col3_2b = st.columns(2)
-            with col3_2a:
-                st.metric(
-                    label="North Load Shedding",
-                    value=f"{int(north_ls):,} MW",
-                )
-                st.metric(
-                    label="Klang Valley Load Shedding",
-                    value=f"{int(kvalley_ls):,} MW",
-                )
-            with col3_2b:
-                st.metric(
-                    label="South Load Shedding",
-                    value=f"{int(south_ls):,} MW",
-                )
-                st.metric(
-                    label="East Load Shedding",
-                    value=f"{int(east_ls):,} MW",
-                )
+        SCHEME_COLUMNS = ['UFLS', 'UVLS', "EMLS"]
+        for scheme in SCHEME_COLUMNS:
+            if scheme in filtered_data.columns:
+                display_ls_metrics(
+                    scheme=scheme, 
+                    df=filtered_data, 
+                    load_profile = load_profile_df
+                )               
+        
     else:
         st.write(filtered_data)
 
     # data viewer temp
-    data = LS_Data(load_profile=load_profile_df)
-    st.write(load_shed.mlist_load())
+    # data = LS_Data(load_profile=load_profile_df)
+    # st.write(load_shed.mlist_load())
