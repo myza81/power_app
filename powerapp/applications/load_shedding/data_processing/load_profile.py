@@ -22,8 +22,10 @@ def load_profile_enrichment(df):
     return df
 
 
-def load_profile_metric(df, zone, scheme):
-    df_filtered = df[df[scheme].notna()]
+def load_profile_metric(df, zone, scheme=None):
+    df_filtered = df
+    if scheme is not None:
+        df_filtered = df[df[scheme].notna()]
     zone_MW = df_filtered.groupby(
         ["zone"],
         as_index=False,

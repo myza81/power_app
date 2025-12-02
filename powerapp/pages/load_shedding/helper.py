@@ -10,17 +10,26 @@ def display_ls_metrics(scheme, df, load_profile):
     
     col3_1, col3_2 = st.columns(2)
 
-    total_mw = load_profile["Pload (MW)"].sum()
+    total_MD = load_profile["Pload (MW)"].sum()
+    # north_MD = load_profile_metric(load_profile, "North")
+    # kValley_MD = load_profile_metric(load_profile, "KlangValley")
+    # south_MD= load_profile_metric(load_profile, "South")
+    # east_MD= load_profile_metric(load_profile, "East")
+    
     total_scheme_ls = df.loc[df[scheme].notna(), "Pload (MW)"].sum()
     
-    if total_mw == 0:
+    if total_MD == 0:
         pct_scheme_ls = 0
     else:
-        pct_scheme_ls = int((total_scheme_ls / total_mw) * 100)
+        pct_scheme_ls = int((total_scheme_ls / total_MD) * 100)
 
     zones = ["North", "KlangValley", "South", "East"]
     zone_data = {
         zone: load_profile_metric(df=df, zone=zone, scheme=scheme)
+        for zone in zones
+    }
+    zone_MD = {
+        zone: load_profile_metric(df=load_profile, zone=zone)
         for zone in zones
     }
     
@@ -38,22 +47,26 @@ def display_ls_metrics(scheme, df, load_profile):
         col3_2a, col3_2b = st.columns(2)
         
         with col3_2a:
-            st.metric(
-                label=f"{zones[0]} Load Shedding",
-                value=f"{int(zone_data[zones[0]]):,} MW",
-            )
-            st.metric(
-                label=f"{zones[1]} Load Shedding",
-                value=f"{int(zone_data[zones[1]]):,} MW",
-            )
+                zone_metric(col3_2a, "North", zone_data, zone_MD)
+                zone_metric(col3_2a, "KlangValley", zone_data, zone_MD)
+        
         with col3_2b:
-            st.metric(
-                label=f"{zones[2]} Load Shedding",
-                value=f"{int(zone_data[zones[2]]):,} MW",
-            )
-            st.metric(
-                label=f"{zones[3]} Load Shedding",
-                value=f"{int(zone_data[zones[3]]):,} MW",
-            )
+            zone_metric(col3_2b, "South", zone_data, zone_MD)
+            zone_metric(col3_2b, "East", zone_data, zone_MD)
+        
     st.divider()
     
+def zone_metric(col, zone_name, zone_data, zone_MD):
+    ls = int(zone_data[zone_name])
+    md = int(zone_MD[zone_name])
+    pct = (ls / md) * 100
+    
+    with col:
+        st.metric(
+            label=f"{zone_name} Load Shedding",
+            value=f"{ls:,} MW",
+        )
+        st.markdown(
+            f"<p style='margin-top:-25px; color:gray; font-size:13px;'>{pct:.0f}% of total {zone_name} MD</p>",
+            unsafe_allow_html=True,
+        )

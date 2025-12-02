@@ -118,7 +118,12 @@ def ls_data_viewer() -> None:
                 key="active_ls_search_box",
             )
         filtered_df = df_search_filter(filtered_data, search_query)
-        st.dataframe(filtered_df)
+        st.dataframe(
+            filtered_df, 
+            column_order=["zone", "gm_subzone", "substation_name", "mnemonic", "kV", "UFLS", "UVLS", "EMLS", "breaker_id", "ls_dp","group_trip_id", "Pload (MW)"],
+            width="stretch"
+        )
+        
 
         SCHEME_COLUMNS = ['UFLS', 'UVLS', "EMLS"]
         for scheme in SCHEME_COLUMNS:
