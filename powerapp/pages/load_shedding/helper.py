@@ -11,11 +11,6 @@ def display_ls_metrics(scheme, df, load_profile):
     col3_1, col3_2 = st.columns(2)
 
     total_MD = load_profile["Pload (MW)"].sum()
-    # north_MD = load_profile_metric(load_profile, "North")
-    # kValley_MD = load_profile_metric(load_profile, "KlangValley")
-    # south_MD= load_profile_metric(load_profile, "South")
-    # east_MD= load_profile_metric(load_profile, "East")
-    
     total_scheme_ls = df.loc[df[scheme].notna(), "Pload (MW)"].sum()
     
     if total_MD == 0:
@@ -40,7 +35,7 @@ def display_ls_metrics(scheme, df, load_profile):
         )
         st.metric(
             label=f"% {scheme} Quantum Over MD",
-            value=f"{pct_scheme_ls:.0f}%",
+            value=f"{pct_scheme_ls:.1f}%",
         )
         
     with col3_2:
@@ -67,6 +62,6 @@ def zone_metric(col, zone_name, zone_data, zone_MD):
             value=f"{ls:,} MW",
         )
         st.markdown(
-            f"<p style='margin-top:-25px; color:gray; font-size:13px;'>{pct:.0f}% of total {zone_name} MD</p>",
+            f"<p style='margin-top:-25px; color:gray; font-size:13px;'>{pct:.1f}% of total {zone_name} MD</p>",
             unsafe_allow_html=True,
         )
