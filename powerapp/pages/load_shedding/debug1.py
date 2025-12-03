@@ -25,5 +25,5 @@ load_shed = LoadShedding(
     scheme=ls_scheme,
 )
 
-(load_shed.subs_metadata_enrichment())
+print(load_shed.warning_list())
 

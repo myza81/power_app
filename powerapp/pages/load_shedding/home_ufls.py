@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from applications.data_processing.read_data import read_raw_data
-from pages.load_shedding.tab1_data_viewer import ls_data_viewer
+
+
 from applications.load_shedding.data_processing.LoadShedding import (
-    # LoadShedding,
+    LoadShedding,
     LS_Data,
 )
 from applications.load_shedding.data_processing.load_profile import (
@@ -12,6 +13,8 @@ from applications.load_shedding.data_processing.load_profile import (
     load_profile_metric,
     df_search_filter,
 )
+from pages.load_shedding.tab1_data_viewer import ls_data_viewer
+from pages.load_shedding.tab3_critical_list import critical_list
 
 
 st.set_page_config(layout="wide", page_title="UFLS")
@@ -21,6 +24,9 @@ if "load_profile" not in st.session_state:
 
 if "ls_data" not in st.session_state:
     st.session_state["ls_data"] = None
+
+if "loadshedding" not in st.session_state:
+    st.session_state["loadshedding"] = None
 
 # --- Side Bar --- #
 st.sidebar.header("📁 Upload Latest Load Profile.")
@@ -102,8 +108,11 @@ if load_profile_df is not None:
             st.dataframe(filtered_df.head(rows_to_display), width="stretch")
 
     tab1, tab2, tab3 = st.tabs(
-        ["Data Viewer", "Critical Load List", "Reviewer"]
+        ["Data Viewer", "Reviewer", "Critical Load List"]
     )
 
     with tab1:
         ls_data_viewer()
+    with tab3:
+        critical_list()
+    

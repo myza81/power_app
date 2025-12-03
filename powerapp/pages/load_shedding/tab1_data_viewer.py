@@ -10,7 +10,6 @@ from applications.load_shedding.data_processing.helper import columns_list
 from applications.load_shedding.data_processing.load_profile import (
     load_profile_metric,
     df_search_filter,
-    # df_stage_filter,
 )
 from pages.load_shedding.helper import display_ls_metrics
 
@@ -98,6 +97,8 @@ def ls_data_viewer() -> None:
         scheme=ls_scheme,
         load_profile=load_profile_df,
     )
+    st.session_state["loadshedding"] = load_shed
+
 
     filtered_data = load_shed.filtered_data(
         filters={

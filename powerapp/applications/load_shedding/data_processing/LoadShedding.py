@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 from functools import reduce
 from typing import Optional, Dict, List
-from .SchemeReview import SchemeReview
 from applications.load_shedding.data_processing.helper import columns_list
 
 
@@ -236,3 +235,18 @@ class LoadShedding(LS_Data):
             return "Filtering resulted in an empty DataFrame."
 
         return ls_w_load
+    
+    def warning_list(self):
+        defeated_list = self.log_defeat
+        defeated_list['category'] = 'defeated'
+        dn_critical_list = self.dn_excluded_list
+        dn_critical_list['category'] = 'dn_critical'
+
+        warning_list = pd.merge(
+            defeated_list,
+            dn_critical_list,
+            on=['group_trip_id','date', 'category', 'remark'],
+            how='outer'
+        )
+  
+        return warning_list
