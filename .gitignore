@@ -9,3 +9,5 @@ __pycache__/
 
 # .gitignore
 node_modules/
+
+.DS_Store
