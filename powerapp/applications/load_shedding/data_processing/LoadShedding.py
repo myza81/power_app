@@ -123,6 +123,7 @@ class LoadShedding(LS_Data):
         return subs_meta
 
     def ls_combined(self) -> pd.DataFrame:
+        """Load shedding scheme """
         incomer_dp = self.ls_incomer if self.ls_incomer is not None else pd.DataFrame()
         incomer_dp["ls_dp"] = "incomer"
         hvcb_dp = self.ls_hvcb if self.ls_hvcb is not None else pd.DataFrame()
@@ -170,6 +171,7 @@ class LoadShedding(LS_Data):
         )
 
     def ls_list(self) -> pd.DataFrame:
+        """"""
         assignments: Dict[str, pd.DataFrame] = {
             "UFLS": pd.DataFrame(self.ufls_assignment),
             "UVLS": pd.DataFrame(self.uvls_assignment),
@@ -251,6 +253,7 @@ class LoadShedding(LS_Data):
         return ls_w_load
     
     def warning_list(self):
+        """Combination of all substation that has been identified as critical list from DSO list & GSO critical list. The list refer to local_trip_load (incomer load)"""
         defeated_list = self.log_defeat
         defeated_list['category'] = 'defeated'
         dn_critical_list = self.dn_excluded_list
@@ -266,12 +269,19 @@ class LoadShedding(LS_Data):
         return warning_list
     
     def warning_list_with_active_ls(self):
+        master_load = self.mlist_load_grpby_tripId()
         all_latest_ls = self.all_latest_active_ls()
+        latest_ls_wt_load = pd.merge(all_latest_ls, master_load,
+                             on="group_trip_id", how="left")
+ 
         warning_list = self.warning_list()
+        
+        # to be check #############
         warning_with_ls = pd.merge(
-            all_latest_ls,
+            latest_ls_wt_load,
             warning_list,
-            on="group_trip_id",
+            left_on="local_trip_id",
+            right_on="group_trip_id",
             how="inner"
         )
         return warning_with_ls

@@ -6,10 +6,14 @@ from applications.load_shedding.data_processing.load_profile import (
 
 
 def critical_list():
-    load_profile_df = st.session_state["load_profile"]
     loadshedding = st.session_state["loadshedding"]
     defeated_list = loadshedding.warning_list()
-    all_ls_with_warning = loadshedding.warning_list_with_active_ls()
+    
+    selected_columns = ["local_trip_id", 'UFLS', 'UVLS', 'EMLS','remark', 'category']
+    all_ls_with_warning = loadshedding.warning_list_with_active_ls()[selected_columns]
+
+    
+    # print(all_ls_with_warning)
 
     if isinstance(all_ls_with_warning, pd.DataFrame):
         search_query = st.text_input(
@@ -18,6 +22,7 @@ def critical_list():
             key="overlap_warning_list_search_box",
         )
         filtered_df = df_search_filter(all_ls_with_warning, search_query)
+        print(filtered_df)
 
         st.dataframe(
             filtered_df,
@@ -42,4 +47,5 @@ def critical_list():
             column_order=["group_trip_id", "date", "remark", "category"],
             width="stretch"
         )
-
+    
+    # st.dataframe(loadshedding.mlist_load_grpby_tripId())
