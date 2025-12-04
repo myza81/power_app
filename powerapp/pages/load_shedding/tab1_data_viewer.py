@@ -1,10 +1,9 @@
 import pandas as pd
 import streamlit as st
-from typing import List, Optional, Sequence, Tuple, Any
+from typing import List, Optional, Sequence, Any
 
 from applications.load_shedding.data_processing.LoadShedding import (
     LoadShedding,
-    LS_Data,
 )
 from applications.load_shedding.data_processing.helper import columns_list
 from applications.load_shedding.data_processing.load_profile import (
@@ -25,7 +24,7 @@ def column_data_list(
         return []
 
     values = df[column_name].tolist()
-    unique_ordered = list(dict.fromkeys(values))  # ordered unique
+    unique_ordered = list(dict.fromkeys(values))
 
     if unwanted_el:
         unique_ordered = [v for v in unique_ordered if v not in unwanted_el]
@@ -39,6 +38,69 @@ def column_data_list(
 
     return unique_ordered
 
+def display_load_profile():
+    
+    show_table = st.checkbox("**Show Load Profile Data**", value=False)
+    
+    if show_table:
+        load_profile_df = st.session_state["load_profile"] 
+        total_mw = load_profile_df["Pload (MW)"].sum()
+        total_mvar = load_profile_df["Qload (Mvar)"].sum()
+        north_MW = load_profile_metric(load_profile_df, "North")
+        kValley_MW = load_profile_metric(load_profile_df, "KlangValley")
+        south_MW = load_profile_metric(load_profile_df, "South")
+        east_MW = load_profile_metric(load_profile_df, "East")
+
+        col_f1, col_f2 = st.columns(2)
+        col_f1.metric(
+            f"Active Power MD",
+            f"{int(total_mw):,} MW",
+        )
+
+        with col_f2:
+            colf2_1, colf2_2 = st.columns(2)
+            with colf2_1:
+                st.metric(
+                    label="North",
+                    value=f"{int(north_MW):,} MW",
+                )
+                st.metric(
+                    label="Klang Valley",
+                    value=f"{int(kValley_MW):,} MW",
+                )
+            with colf2_2:
+                st.metric(
+                    label="South",
+                    value=f"{int(south_MW):,} MW",
+                )
+                st.metric(
+                    label="East",
+                    value=f"{int(east_MW):,} MW",
+                )
+
+        search_query = st.text_input(
+            label="Search for a Keyword:",
+            placeholder="Enter your search term here...",  
+            key="search_box", 
+        )
+
+        filtered_df = df_search_filter(load_profile_df, search_query)
+
+        if filtered_df.empty and search_query:
+            st.warning(f"No results found for the query: **'{search_query}'**")
+            max_rows = 0
+            rows_to_display = 0
+        else:
+            max_rows = len(filtered_df)
+            rows_to_display = st.slider(
+                "Select number of rows to display:",
+                min_value=1,
+                max_value=max_rows,
+                value=min(5, max_rows) if max_rows > 1 else 1,
+                step=1,
+                help=f"Currently filtering from {len(load_profile_df)} total rows. {max_rows} rows match the search query.",
+            )
+            st.dataframe(filtered_df.head(rows_to_display), width="stretch")
 
 def ls_data_viewer() -> None:
     load_profile_df = st.session_state["load_profile"] 
@@ -46,6 +108,7 @@ def ls_data_viewer() -> None:
     ufls_assignment = ls_data.ufls_assignment
     ufls_setting = ls_data.ufls_setting
     subs_masterlist = ls_data.subs_meta
+    zone_mapping = ls_data.zone_mapping
 
     col1_1, col1_2, col1_3 = st.columns(3)
     col2_1, col2_2, col2_3 = st.columns(3)
@@ -59,10 +122,7 @@ def ls_data_viewer() -> None:
         ls_scheme = st.multiselect(label="Scheme", options=["UFLS", "UVLS", "EMLS"], default="UFLS")
 
     with col1_3:
-        zone = column_data_list(
-            subs_masterlist,
-            "zone",
-        )
+        zone = list(set(zone_mapping.values()))
         zone_selected = st.multiselect(label="Zone Location", options=zone)
 
     with col2_1:
@@ -137,7 +197,3 @@ def ls_data_viewer() -> None:
         
     else:
         st.write(filtered_data)
-
-    # data viewer temp
-    # data = LS_Data(load_profile=load_profile_df)
-    # st.write(load_shed.mlist_load())

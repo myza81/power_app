@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import List, Optional, Sequence, Tuple, Any
+from typing import List, Optional, Sequence, Tuple
 
 
 def columns_list(

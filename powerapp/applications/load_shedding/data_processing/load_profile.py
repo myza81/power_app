@@ -1,5 +1,4 @@
 import pandas as pd
-from typing import List, Optional, Sequence, Tuple, Any
 
 
 def load_profile_enrichment(df):
