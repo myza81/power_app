@@ -1,10 +1,8 @@
 import os
 import sys
 import pandas as pd
-import numpy as np
 from functools import reduce
 from typing import Optional, Dict, List
-from .SchemeReview import SchemeReview
 from applications.load_shedding.data_processing.helper import columns_list
 
 
@@ -46,8 +44,6 @@ def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
         latest_review = review_year_list[0]
 
     ls_assignment.rename(columns={latest_review: scheme}, inplace=True)
-    # print(ls_assignment)
-
     ls_review = ls_assignment[["group_trip_id", scheme]]
 
     ls_review = ~ls_review[scheme].isin(["nan", "#na"])
@@ -91,20 +87,7 @@ class LS_Data:
             get_path("emls_assignment.xlsx", data_dir))
         self.available_ls = read_ls_data(
             get_path("available_ls.xlsx", data_dir))
-
-
-class LoadShedding(LS_Data):
-
-    def __init__(
-        self, review_year: str, scheme: list[str], load_profile: pd.DataFrame
-    ) -> None:
-
-        super().__init__(load_profile)
-        self.review_year = review_year
-        self.scheme = scheme
-
-    def subs_metadata_enrichment(self):
-        ZONE_MAPPING = {
+        self.zone_mapping = {
             'North-Perda': 'North',
             'North-Ipoh': 'North',
             'North-Kedah_Perlis': 'North',
@@ -119,15 +102,28 @@ class LoadShedding(LS_Data):
             'East-Kuantan': 'East',
         }
 
+
+class LoadShedding(LS_Data):
+
+    def __init__(
+        self, review_year: str, scheme: list[str], load_profile: pd.DataFrame
+    ) -> None:
+
+        super().__init__(load_profile)
+        self.review_year = review_year
+        self.scheme = scheme
+
+    def subs_metadata_enrichment(self):
         if self.subs_meta is None:
             return pd.DataFrame()
 
         subs_meta = self.subs_meta.copy()
-        subs_meta['zone'] = subs_meta['gm_subzone'].map(ZONE_MAPPING)
+        subs_meta['zone'] = subs_meta['gm_subzone'].map(self.zone_mapping)
 
         return subs_meta
 
     def ls_combined(self) -> pd.DataFrame:
+        """Load shedding scheme """
         incomer_dp = self.ls_incomer if self.ls_incomer is not None else pd.DataFrame()
         incomer_dp["ls_dp"] = "incomer"
         hvcb_dp = self.ls_hvcb if self.ls_hvcb is not None else pd.DataFrame()
@@ -175,6 +171,7 @@ class LoadShedding(LS_Data):
         )
 
     def ls_list(self) -> pd.DataFrame:
+        """"""
         assignments: Dict[str, pd.DataFrame] = {
             "UFLS": pd.DataFrame(self.ufls_assignment),
             "UVLS": pd.DataFrame(self.uvls_assignment),
@@ -210,7 +207,25 @@ class LoadShedding(LS_Data):
                              on="group_trip_id", how="left")
 
         return ls_w_load
+    
+    def all_latest_active_ls(self):
+        current_datetime = pd.to_datetime('now')
+        current_year = current_datetime.year
 
+        ufls_ls = ls_active(self.ufls_assignment, review_year=current_year, scheme="UFLS")
+        uvls_ls = ls_active(self.uvls_assignment, review_year=current_year, scheme="UVLS")
+        emls_ls = ls_active(self.uvls_assignment, review_year=current_year, scheme="EMLS")
+
+        ls_merged = reduce(
+                lambda left, right: pd.merge(
+                    left, right, on="group_trip_id", how="outer"
+                ),
+                [ufls_ls, uvls_ls, emls_ls],
+            )
+
+        return ls_merged
+
+    
     def filtered_data(self, filters):
         ls_w_load = self.ls_list().copy()
         subs_meta = self.subs_metadata_enrichment()
@@ -236,3 +251,37 @@ class LoadShedding(LS_Data):
             return "Filtering resulted in an empty DataFrame."
 
         return ls_w_load
+    
+    def warning_list(self):
+        """Combination of all substation that has been identified as critical list from DSO list & GSO critical list. The list refer to local_trip_load (incomer load)"""
+        defeated_list = self.log_defeat
+        defeated_list['category'] = 'defeated'
+        dn_critical_list = self.dn_excluded_list
+        dn_critical_list['category'] = 'dn_critical'
+
+        warning_list = pd.merge(
+            defeated_list,
+            dn_critical_list,
+            on=['group_trip_id','date', 'category', 'remark'],
+            how='outer'
+        )
+  
+        return warning_list
+    
+    def warning_list_with_active_ls(self):
+        master_load = self.mlist_load_grpby_tripId()
+        all_latest_ls = self.all_latest_active_ls()
+        latest_ls_wt_load = pd.merge(all_latest_ls, master_load,
+                             on="group_trip_id", how="left")
+ 
+        warning_list = self.warning_list()
+        
+        # to be check #############
+        warning_with_ls = pd.merge(
+            latest_ls_wt_load,
+            warning_list,
+            left_on="local_trip_id",
+            right_on="group_trip_id",
+            how="inner"
+        )
+        return warning_with_ls

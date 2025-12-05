@@ -1,8 +1,6 @@
-import pandas as pd
 import streamlit as st
-from typing import List, Optional, Sequence, Tuple, Any
 from applications.load_shedding.data_processing.load_profile import (
-    load_profile_metric
+    load_profile_metric,
 )
 
 

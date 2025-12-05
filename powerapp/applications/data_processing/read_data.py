@@ -4,26 +4,6 @@ from io import BytesIO
 
 
 def find_correct_header(uploaded_file, required_keywords, optional_groups=None):
-    """
-    Detect correct header row by checking for given keywords (case-insensitive).
-
-    Parameters
-    ----------
-    uploaded_file : UploadedFile
-        File object from Streamlit uploader.
-    required_keywords : list[str]
-        List of keywords that must exist in the header.
-    optional_groups : list[list[str]], optional
-        List of keyword groups where at least one keyword from each group must appear.
-        Example: [["voltage", "current", "mw"]]
-
-    Returns
-    -------
-    tuple:
-        (raw_df, correct_df)
-        or
-        (raw_df, ValueError, missing_keywords)
-    """
     # --- Step 1: Load file ---
     file_bytes = uploaded_file.read()
     raw_df = read_raw_data(file_bytes, uploaded_file.name)
@@ -37,15 +17,12 @@ def find_correct_header(uploaded_file, required_keywords, optional_groups=None):
         # print("columns", columns)
 
         def is_partial_match(keyword, col):
-            """Check if keyword partially matches column using substring or simple pattern."""
-            # Allow small variations like underscores, spaces, or parentheses
             pattern = re.sub(r"[^a-z0-9]", ".*", keyword.lower())
             return re.search(pattern, col) is not None
 
         # --- Check required keywords ---
         missing_required = []
         for k in required_lower:
-            # print('required_lower', k)
             if not any(is_partial_match(k, col) for col in columns):
                 missing_required.append(k)
 
@@ -53,7 +30,6 @@ def find_correct_header(uploaded_file, required_keywords, optional_groups=None):
         missing_groups = []
         for group in optional_groups:
             group_lower = [g.lower() for g in group]
-            # print('group_lower', group_lower)
             if not any(
                 any(is_partial_match(g, col) for col in columns)
                 for g in group_lower
@@ -62,8 +38,6 @@ def find_correct_header(uploaded_file, required_keywords, optional_groups=None):
 
         has_all_required = len(missing_required) == 0
         has_valid_groups = len(missing_groups) == 0
-
-        # print('missing_groups', missing_groups)
 
         return has_all_required and has_valid_groups, missing_required, missing_groups
 
@@ -89,7 +63,6 @@ def find_correct_header(uploaded_file, required_keywords, optional_groups=None):
 
 
 def read_raw_data(file_bytes, file_name, skiprow_index=-1):
-    """Read CSV or Excel data from in-memory bytes."""
     file_buffer = BytesIO(file_bytes)
     skip_row = list(range(skiprow_index + 1)) if skiprow_index >= 0 else None
 
@@ -103,7 +76,6 @@ def read_raw_data(file_bytes, file_name, skiprow_index=-1):
 
 
 def get_key_metric(df, metric, time_column):
-
     metric_cols = [c for c in df.columns if metric in c.lower()]
     time_cols = [c for c in df.columns if time_column in c.lower()]
     time_col = time_cols[0] if time_cols else None
