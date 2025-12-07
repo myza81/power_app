@@ -121,7 +121,7 @@ def ls_reviewer():
         with tab2_s3_col1:
             st.metric(
                 label=f"Available Potential Quantum: ",
-                value=f"{int(avail_qunatum_mw):,} MW",
+                value=f"{int(avail_qunatum_mw):,} MW ({int((avail_qunatum_mw/total_mw)*100)}%)",
             )
 
         with tab2_s3_col2:
@@ -129,21 +129,21 @@ def ls_reviewer():
             with col_s3_1:
                 st.metric(
                     label=f"North: ",
-                    value=f"{int(north_avail_MW):,} MW",
+                    value=f"{int(north_avail_MW):,} MW ({int((north_avail_MW/north_MW)*100)}%)",
                 )
                 st.metric(
                     label=f"Klang Valley: ",
-                    value=f"{int(kValley_avail_MW):,} MW",
+                    value=f"{int(kValley_avail_MW):,} MW ({int((kValley_avail_MW/kValley_MW)*100)}%)",
                 )
 
             with col_s3_2:
                 st.metric(
                     label=f"South: ",
-                    value=f"{int(south_avail_MW):,} MW",
+                    value=f"{int(south_avail_MW):,} MW ({int((south_avail_MW/south_MW)*100)}%)",
                 )
                 st.metric(
                     label=f"East: ",
-                    value=f"{int(east_avail_MW):,} MW",
+                    value=f"{int(east_avail_MW):,} MW ({int((east_avail_MW/east_MW)*100)}%)",
                 )
 
         with tab2_s3_col3:

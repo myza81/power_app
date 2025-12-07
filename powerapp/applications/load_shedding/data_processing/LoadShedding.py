@@ -342,11 +342,12 @@ class LoadShedding:
 
         return total_potential_mw
 
-    def filtered_data(self, filters):
+    def filtered_data(self, filters, df: Optional[pd.DataFrame] = None) -> pd.DataFrame:
         """Applies filtering on the loadshedding assignments based on the provided filter criteria in the 'filters' dictionary. It merges the load shedding assignments with the substation metadata for enriched filtering."""
         if self.loadshedding_assignments().empty or self.subs_metadata_enrichment().empty:
             return "Warning: No schemes selected or No subs metadata available."
 
+        
         review_year = filters.get("review_year", None)
         scheme = filters.get("scheme", None)
 
