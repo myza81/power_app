@@ -1,5 +1,41 @@
 import streamlit as st
 
+# -- css --#
+st.markdown(
+    """
+        <style>
+        /* Title text (the label) */
+        /* [data-testid="stMarkdownContainer"] > div {
+            font-size: 22px; 
+            font-weight: 300;
+            color: #2E86C1; 
+        } */
+
+        [data-testid="stWidgetLabel"] > [data-testid="stMarkdownContainer"] > p {
+            font-size: 15px; 
+            */font-weight: 300;*/
+            */color: #2E86C1; */
+        }
+    
+        /* Title text (the label) */
+        [data-testid="stMetricLabel"] > div {
+            font-size: 22px;
+        }
+
+        /* Value text (the big number) */
+        [data-testid="stMetricValue"] > div {
+            font-size: 20px;   
+            font-weight: 600;
+            color: #2E86C1; 
+        }
+
+        /* Delta text (the +/- value) */
+        [data-testid="stMetricDelta"] > div {
+            font-size: 18px; 
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
 # -- page setup --#
 home = st.Page(
     page="pages/home/homepage.py",

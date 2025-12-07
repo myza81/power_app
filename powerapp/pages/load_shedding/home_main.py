@@ -46,6 +46,8 @@ if load_profile_df is not None:
         display_load_profile()
         st.divider()
         ls_data_viewer()
+    with tab2:
+        ls_reviewer()
     with tab3:
         critical_list()
     
