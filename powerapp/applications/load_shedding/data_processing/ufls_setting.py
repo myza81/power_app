@@ -1,0 +1,80 @@
+UFLS_SETTING = {
+            "stage_1": {
+                "freq1": 49.3,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_2": {
+                "freq1": 49.2,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_3": {
+                "freq1": 49.1,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_4": {
+                "freq1": 49.0,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_5": {
+                "freq1": 48.9,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_6": {
+                "freq1": 48.8,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_7": {
+                "freq1": 48.7,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_8": {
+                "freq1": 48.6,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_9": {
+                "freq1": 48.5,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_10": {
+                "freq1": 48.4,
+                "delay1": 0,
+                "freq2": None,
+                "delay2": None,
+            },
+            "stage_11": {
+                "freq1": 48.3,
+                "delay1": 0,
+                "freq2": 49.3,
+                "delay2": 120,
+            },
+            "stage_12": {
+                "freq1": 48.2,
+                "delay1": 0,
+                "freq2": 49.3,
+                "delay2": 90,
+            },
+            "stage_13": {
+                "freq1": 48.1,
+                "delay1": 0,
+                "freq2": 49.3,
+                "delay2": 60,
+            },
+        }

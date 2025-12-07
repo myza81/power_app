@@ -1,12 +1,14 @@
 import streamlit as st
 from applications.data_processing.read_data import read_raw_data
 from applications.load_shedding.data_processing.LoadShedding import (
-    LS_Data,
+    LoadShedding,
 )
 from applications.load_shedding.data_processing.load_profile import (
     load_profile_enrichment,
 )
-from pages.load_shedding.tab1_data_viewer import display_load_profile, ls_data_viewer
+from pages.load_shedding.tab1_ls_viewer import ls_data_viewer
+from pages.load_shedding.tab1_load_profile import display_load_profile
+from pages.load_shedding.tab2_reviewer import ls_reviewer
 from pages.load_shedding.tab3_critical_list import critical_list
 
 
@@ -14,9 +16,6 @@ st.set_page_config(layout="wide", page_title="UFLS")
 
 if "load_profile" not in st.session_state:
     st.session_state["load_profile"] = None
-
-if "ls_data" not in st.session_state:
-    st.session_state["ls_data"] = None
 
 if "loadshedding" not in st.session_state:
     st.session_state["loadshedding"] = None
@@ -37,8 +36,7 @@ if load_profile_uploader is not None:
     st.session_state["load_profile"] = load_profile_df
 
 if load_profile_df is not None:
-    ls_data = LS_Data(load_profile=load_profile_df)
-    st.session_state["ls_data"] = ls_data
+    st.session_state["loadshedding"] = LoadShedding(load_profile=load_profile_df)
 
     tab1, tab2, tab3 = st.tabs(
         ["Data Viewer", "Reviewer", "Critical Load List"]
@@ -46,6 +44,7 @@ if load_profile_df is not None:
 
     with tab1:
         display_load_profile()
+        st.divider()
         ls_data_viewer()
     with tab3:
         critical_list()

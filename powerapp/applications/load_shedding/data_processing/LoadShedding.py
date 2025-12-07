@@ -3,7 +3,10 @@ import sys
 import pandas as pd
 from functools import reduce
 from typing import Optional, Dict, List
+
 from applications.load_shedding.data_processing.helper import columns_list
+from applications.load_shedding.data_processing.ufls_setting import UFLS_SETTING
+from applications.load_shedding.data_processing.uvls_setting import UVLS_SETTING
 
 
 def read_ls_data(file_path: str) -> Optional[pd.DataFrame]:
@@ -31,11 +34,10 @@ def get_path(filename: str, data_dir: str = "data") -> str:
 
 
 def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
-
     ls_assignment = ls_df.copy() if ls_df is not None else pd.DataFrame()
 
     review_year_list = columns_list(
-        ls_assignment, unwanted_el=["group_trip_id"])
+        ls_assignment, unwanted_el=["assignment_id"])
 
     latest_review = review_year
 
@@ -44,10 +46,10 @@ def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
         latest_review = review_year_list[0]
 
     ls_assignment.rename(columns={latest_review: scheme}, inplace=True)
-    ls_review = ls_assignment[["group_trip_id", scheme]]
+    ls_review = ls_assignment[["assignment_id", scheme]]
 
     ls_review = ~ls_review[scheme].isin(["nan", "#na"])
-    ls_review_active = ls_assignment.loc[ls_review, ["group_trip_id", scheme]]
+    ls_review_active = ls_assignment.loc[ls_review, ["assignment_id", scheme]]
 
     ls_review_active["sort_key"] = (
         ls_review_active[scheme].str.extract(r"stage_(\d+)").astype(int)
@@ -59,34 +61,45 @@ def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
     return pd.DataFrame(ls_sorted)
 
 
-class LS_Data:
+class LoadShedding:
     def __init__(self, load_profile: pd.DataFrame, data_dir: str = "data") -> None:
         self.load_profile = load_profile.copy()
-        self.dn_excluded_list = read_ls_data(
-            get_path("dn_exluded_list.xlsx", data_dir))
+
         self.ufls_assignment = read_ls_data(
-            get_path("ufls_assignment.xlsx", data_dir))
+            get_path("assignment_ufls.xlsx", data_dir))
         if self.ufls_assignment is not None:
             self.ufls_assignment.columns = self.ufls_assignment.columns.astype(
                 str)
         self.uvls_assignment = read_ls_data(
-            get_path("uvls_assignment.xlsx", data_dir))
+            get_path("assignment_uvls.xlsx", data_dir))
         if self.uvls_assignment is not None:
             self.uvls_assignment.columns = self.uvls_assignment.columns.astype(
                 str)
-        self.ls_incomer = read_ls_data(get_path("incomer_dp.xlsx", data_dir))
-        self.ls_hvcb = read_ls_data(get_path("hvcb_dp.xlsx", data_dir))
-        self.pocket_rly_loc = read_ls_data(get_path("hvcb_rly.xlsx", data_dir))
-        self.subs_meta = read_ls_data(get_path("subs_metadata.xlsx", data_dir))
-        self.ufls_setting = read_ls_data(
-            get_path("ufls_setting.xlsx", data_dir))
-        self.uvls_setting = read_ls_data(
-            get_path("uvls_setting.xlsx", data_dir))
-        self.log_defeat = read_ls_data(get_path("log_defeated.xlsx", data_dir))
         self.emls_assignment = read_ls_data(
-            get_path("emls_assignment.xlsx", data_dir))
-        self.available_ls = read_ls_data(
-            get_path("available_ls.xlsx", data_dir))
+            get_path("assignment_emls.xlsx", data_dir))
+        if self.emls_assignment is not None:
+            self.emls_assignment.columns = self.emls_assignment.columns.astype(
+                str)
+        self.ufls_setting = pd.DataFrame(UFLS_SETTING)
+        self.uvls_setting = pd.DataFrame(UVLS_SETTING)
+
+        # dp_incomer.xlsx = incomer (LVCB) data point to map to load profile --> to get MW load quantum
+        self.ls_incomer = read_ls_data(get_path("dp_incomer.xlsx", data_dir))
+
+        # dp_hvcb.xlsx = hvcb (HVCB) data point to map incomer_dp and then map to load profile --> to get MW load quantum
+        self.ls_hvcb = read_ls_data(get_path("dp_hvcb.xlsx", data_dir))
+
+        # rly_hvcb.xlsx = UFLS & UVLS relay bay assignment installed for LPC and pocket
+        self.hvcb_rly_loc = read_ls_data(get_path("rly_hvcb.xlsx", data_dir))
+
+        # rly_lvcb.xlsx = UFLS & UVLS relay bay assignment installed for incomer (LVCB)
+        self.incomer_rly_loc = read_ls_data(
+            get_path("rly_incomer.xlsx", data_dir))
+
+        self.flaglist_gso = read_ls_data(get_path("flaglist_gso.xlsx", data_dir))
+        self.flaglist_incomer = read_ls_data(get_path("flaglist_incomer.xlsx", data_dir))
+
+        self.subs_meta = read_ls_data(get_path("subs_metadata.xlsx", data_dir))
         self.zone_mapping = {
             'North-Perda': 'North',
             'North-Ipoh': 'North',
@@ -102,17 +115,6 @@ class LS_Data:
             'East-Kuantan': 'East',
         }
 
-
-class LoadShedding(LS_Data):
-
-    def __init__(
-        self, review_year: str, scheme: list[str], load_profile: pd.DataFrame
-    ) -> None:
-
-        super().__init__(load_profile)
-        self.review_year = review_year
-        self.scheme = scheme
-
     def subs_metadata_enrichment(self):
         if self.subs_meta is None:
             return pd.DataFrame()
@@ -122,43 +124,70 @@ class LoadShedding(LS_Data):
 
         return subs_meta
 
-    def ls_combined(self) -> pd.DataFrame:
-        """Load shedding scheme """
-        incomer_dp = self.ls_incomer if self.ls_incomer is not None else pd.DataFrame()
-        incomer_dp["ls_dp"] = "incomer"
-        hvcb_dp = self.ls_hvcb if self.ls_hvcb is not None else pd.DataFrame()
-        hvcb_dp["ls_dp"] = "pocket"
-        return pd.concat([incomer_dp, hvcb_dp], ignore_index=True)
+    def merged_dp(self) -> pd.DataFrame:
+        """This master list maps out the group_trip_id to the associated HVCB and LVCB (incomer) that have been assigned to be tripped or opened during the load shedding. This list allows for quickly identify all the downstream equipment (like transformers and LVCB) and associated load quantum that will lose when a load shed is executed."""
+        if self.ls_incomer is None and self.ls_hvcb is None:
+            return pd.DataFrame()
+        incomer_dp = self.ls_incomer.copy(deep=True)
+        incomer_dp["ls_dp"] = "Incomer"
+        
+        hvcb_dp = self.ls_hvcb.copy(deep=True)
+        hvcb_dp["ls_dp"] = hvcb_dp.apply(
+            lambda row: "LPC"
+            if '132' in row["group_trip_id"] or '275' in row["group_trip_id"]
+            else (
+                'Interconnector' if '230' in row["group_trip_id"] else "Pocket"
+            ),
+            axis=1,
+        )
+      
+        df_combined = pd.concat([incomer_dp, hvcb_dp], ignore_index=True)
+        df_combined['assignment_id'] = df_combined['group_trip_id'].fillna(df_combined['local_trip_id'])
 
-    def mlist_load(self) -> pd.DataFrame:
+        return df_combined
+    
+    def merged_dp_with_flaglist(self):
+        """This master list maps out the group_trip_id to the associated HVCB and LVCB (incomer) that have been assigned to be tripped or opened during the load shedding along with the critical load flaglist. This list allows for quickly identify all the downstream equipment (like transformers and LVCB) and associated load quantum that will lose when a load shed is executed."""
+        merged_dp = self.merged_dp()
+        flaglist = self.flaglist()
+
+        if merged_dp.empty or flaglist.empty:
+            return pd.DataFrame()   
+        
+        df_combined = pd.merge(
+            merged_dp,
+            flaglist,
+            left_on="local_trip_id",
+            right_on="local_trip_id",
+            how="left"
+        )
+
+        return df_combined
+
+    def dp_grpId_loadquantum(self) -> pd.DataFrame:
+        """This master list is the continuation from the ls_trip_point_map function, which merges the trip point mapping with the load profile to get the actual load quantum that will be shed when a particular group_trip_id is activated."""
+        if self.load_profile is None:
+            return pd.DataFrame()
+        
         load = pd.merge(
-            self.ls_combined(),
+            self.merged_dp_with_flaglist(),
             self.load_profile,
             left_on=["mnemonic", "feeder_id"],
             right_on=["Mnemonic", "Id"],
-            how="inner",
+            how="left",
         )[
-            [
-                "mnemonic",
-                "kV",
-                "local_trip_id",
-                "feeder_id",
-                "breaker_id",
-                "group_trip_id",
-                "Pload (MW)",
-                "Qload (Mvar)",
-                "ls_dp",
-            ]
+            ["mnemonic", "kV", "assignment_id", "local_trip_id", "group_trip_id", "feeder_id", "breaker_id",
+                 "Pload (MW)", "Qload (Mvar)", "ls_dp", "critical_list", "short_text", "long_text"]
         ]
-        load["local_trip_id"] = load["local_trip_id"].fillna(
-            load["group_trip_id"])
-        return load
 
-    def mlist_load_grpby_tripId(self):
-        return (
-            self.mlist_load()
-            .groupby(
-                ["mnemonic", "kV", "local_trip_id", "group_trip_id", "ls_dp"],
+        load = load.fillna('nan')
+        load = load.astype(str)
+        load["Pload (MW)"] = pd.to_numeric(load["Pload (MW)"], errors='coerce').fillna(0)
+        load["Qload (Mvar)"] = pd.to_numeric(load["Qload (Mvar)"], errors='coerce').fillna(0)
+      
+        load_grouped = (
+            load.groupby(
+                ["mnemonic", "kV", "local_trip_id", "group_trip_id", "assignment_id", "ls_dp", "critical_list", "short_text", "long_text"],
                 as_index=False,
             )
             .agg(
@@ -166,26 +195,43 @@ class LoadShedding(LS_Data):
                     "Pload (MW)": "sum",
                     "Qload (Mvar)": "sum",
                     "breaker_id": lambda x: ", ".join(x.astype(str).unique()),
+                    "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
                 }
             )
         )
 
-    def ls_list(self) -> pd.DataFrame:
-        """"""
-        assignments: Dict[str, pd.DataFrame] = {
-            "UFLS": pd.DataFrame(self.ufls_assignment),
-            "UVLS": pd.DataFrame(self.uvls_assignment),
-            "EMLS": pd.DataFrame(self.emls_assignment),
-        }
+        return load_grouped
 
-        processed_schemes: Dict[str, pd.DataFrame] = {
-            scheme_name: ls_active(
-                df, review_year=self.review_year, scheme=scheme_name)
-            for scheme_name, df in assignments.items()
+    def loadshedding_assignments(self, review_year: str = None, scheme: list[str] = None) -> pd.DataFrame:
+        """Combines UFLS, UVLS, or EMLS assignments into a single DataFrame - based on the selected schemes. It return a list of selected load shedding on a selected year of review with its associated load quantum i.e ['UFLS assignment', 'UVLS assignment', ...]. 
+
+        If the review year is not found, it defaults to the latest year available in the data.
+        if no scheme is selected, it defaults to all schemes.
+        """
+        current_datetime = pd.to_datetime('now')
+        current_year = current_datetime.year
+
+        if self.ufls_assignment is None and self.uvls_assignment is None and self.emls_assignment is None:
+            print("Warning: No load shedding assignments found.")
+            return pd.DataFrame()
+
+        if review_year is None:
+            review_year = current_year
+
+        if scheme is None or not scheme:
+            scheme = ["UFLS", "UVLS", "EMLS"]
+
+        assignments: Dict[str, pd.DataFrame] = {
+            "UFLS": ls_active(
+                self.ufls_assignment, review_year=review_year, scheme="UFLS"),
+            "UVLS": ls_active(
+                self.uvls_assignment, review_year=review_year, scheme="UVLS"),
+            "EMLS": ls_active(
+                self.emls_assignment, review_year=review_year, scheme="EMLS"),
         }
 
         selected_scheme_dfs: List[pd.DataFrame] = [
-            processed_schemes[ls_scheme] for ls_scheme in self.scheme
+            assignments[ls_scheme] for ls_scheme in scheme
         ]
 
         if not selected_scheme_dfs:
@@ -195,93 +241,66 @@ class LoadShedding(LS_Data):
         if len(selected_scheme_dfs) > 1:
             ls_merged = reduce(
                 lambda left, right: pd.merge(
-                    left, right, on="group_trip_id", how="outer"
+                    left, right, on="assignment_id", how="outer"
                 ),
                 selected_scheme_dfs,
             )
         else:
             ls_merged = selected_scheme_dfs[0]
-
-        master_load = self.mlist_load_grpby_tripId()
-        ls_w_load = pd.merge(ls_merged, master_load,
-                             on="group_trip_id", how="left")
+        
+        ls_w_load = pd.DataFrame()
+        if not self.dp_grpId_loadquantum().empty:
+            ls_w_load = pd.merge(ls_merged, self.dp_grpId_loadquantum(),
+                                 left_on="assignment_id", right_on="assignment_id", how="left")
 
         return ls_w_load
     
-    def all_latest_active_ls(self):
-        current_datetime = pd.to_datetime('now')
-        current_year = current_datetime.year
-
-        ufls_ls = ls_active(self.ufls_assignment, review_year=current_year, scheme="UFLS")
-        uvls_ls = ls_active(self.uvls_assignment, review_year=current_year, scheme="UVLS")
-        emls_ls = ls_active(self.uvls_assignment, review_year=current_year, scheme="EMLS")
-
-        ls_merged = reduce(
-                lambda left, right: pd.merge(
-                    left, right, on="group_trip_id", how="outer"
-                ),
-                [ufls_ls, uvls_ls, emls_ls],
-            )
-
-        return ls_merged
-
-    
     def filtered_data(self, filters):
-        ls_w_load = self.ls_list().copy()
+        """Applies filtering on the loadshedding assignments based on the provided filter criteria in the 'filters' dictionary. It merges the load shedding assignments with the substation metadata for enriched filtering."""
+        if self.loadshedding_assignments().empty or self.subs_metadata_enrichment().empty:
+            return "Warning: No schemes selected or No subs metadata available."
+
+        review_year = filters.get("review_year", None)
+        scheme = filters.get("scheme", None)
+
+        ls_assignment = self.loadshedding_assignments(
+            review_year=review_year, scheme=scheme).copy(deep=True)
         subs_meta = self.subs_metadata_enrichment()
 
-        if ls_w_load.empty:
-            return "Warning: No schemes selected."
-
-        if subs_meta is not None:
-            ls_w_load = pd.merge(ls_w_load, subs_meta,
-                                 on="mnemonic", how="left")
+        if not subs_meta.empty:
+            ls_assignment = pd.merge(
+                ls_assignment, subs_meta,
+                on="mnemonic", how="left")
 
         for col, selected in filters.items():
             if selected is None or selected == []:
                 continue
-            if col not in ls_w_load.columns:
+            if col not in ls_assignment.columns:
                 continue
             if isinstance(selected, (list, tuple, set)):
-                ls_w_load = ls_w_load[ls_w_load[col].isin(selected)]
+                ls_assignment = ls_assignment[ls_assignment[col].isin(
+                    selected)]
             else:
-                ls_w_load = ls_w_load[ls_w_load[col] == selected]
+                ls_assignment = ls_assignment[ls_assignment[col] == selected]
 
-        if ls_w_load.empty:
+        if ls_assignment.empty:
             return "Filtering resulted in an empty DataFrame."
 
-        return ls_w_load
-    
-    def warning_list(self):
-        """Combination of all substation that has been identified as critical list from DSO list & GSO critical list. The list refer to local_trip_load (incomer load)"""
-        defeated_list = self.log_defeat
-        defeated_list['category'] = 'defeated'
-        dn_critical_list = self.dn_excluded_list
-        dn_critical_list['category'] = 'dn_critical'
+        return ls_assignment
 
-        warning_list = pd.merge(
-            defeated_list,
-            dn_critical_list,
-            on=['group_trip_id','date', 'category', 'remark'],
-            how='outer'
-        )
-  
-        return warning_list
     
-    def warning_list_with_active_ls(self):
-        master_load = self.mlist_load_grpby_tripId()
-        all_latest_ls = self.all_latest_active_ls()
-        latest_ls_wt_load = pd.merge(all_latest_ls, master_load,
-                             on="group_trip_id", how="left")
- 
-        warning_list = self.warning_list()
+    def flaglist(self):
+        """Combination of all substation that has been identified as critical list from DSO list & GSO critical list. The list refer to group_trip_id."""
+        if self.flaglist_incomer is None or self.flaglist_gso is None:
+            return pd.DataFrame()
+
+        defeated_list = self.flaglist_gso.copy(deep=True)
+        defeated_list['long_text'] = defeated_list['long_text'].astype(str)
+
+        incomer_critical_list = self.flaglist_incomer.copy(deep=True)
+        incomer_critical_list['long_text'] = incomer_critical_list['long_text'].astype(str)
         
-        # to be check #############
-        warning_with_ls = pd.merge(
-            latest_ls_wt_load,
-            warning_list,
-            left_on="local_trip_id",
-            right_on="group_trip_id",
-            how="inner"
-        )
-        return warning_with_ls
+        combined_flaglist = pd.concat([defeated_list, incomer_critical_list], ignore_index=True)    
+
+        return combined_flaglist
+    

@@ -4,7 +4,6 @@ from typing import List, Optional, Sequence, Tuple, Any
 
 from applications.load_shedding.data_processing.LoadShedding import (
     LoadShedding,
-    LS_Data,
 )
 from applications.load_shedding.data_processing.LoadShedding import read_ls_data, get_path
 pd.set_option("display.max_rows", None)
@@ -19,11 +18,7 @@ ls_scheme = ["UFLS"]
 review_year = "2025"
 
 
-load_shed = LoadShedding(
-    review_year=review_year,
-    load_profile=load_profile,
-    scheme=ls_scheme,
-)
+loadshedding = LoadShedding(load_profile=load_profile)
 
-print(load_shed.warning_list())
+print(loadshedding.loadshedding_grpId_loadquantum())
 

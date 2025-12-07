@@ -13,8 +13,8 @@ page_1 = st.Page(
     icon=":material/solar_power:",
 )
 page_2 = st.Page(
-    page="pages/load_shedding/home_ufls.py",
-    title="UFLS",
+    page="pages/load_shedding/home_main.py",
+    title="Load Shedding",
     icon=":material/lightning_stand:",
 )
 
