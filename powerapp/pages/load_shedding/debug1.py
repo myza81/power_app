@@ -20,5 +20,8 @@ review_year = "2025"
 
 loadshedding = LoadShedding(load_profile=load_profile)
 
-print(loadshedding.loadshedding_grpId_loadquantum())
 
+assignment = loadshedding.ls_assignment_masterlist()
+
+
+print(assignment)

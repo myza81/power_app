@@ -30,7 +30,7 @@ def ls_reviewer():
 
     ########## debugging info ##########
 
-    st.dataframe(loadshedding.automatic_loadshedding_rly())
+    st.dataframe(loadshedding.loadshedding_assignments())
     # st.dataframe(loadshedding.dp_grpId_loadquantum())
     st.divider()
 
@@ -60,7 +60,7 @@ def ls_reviewer():
 
     ## sub-section 2: Review Year Input ##
     tab2_s2_col1, tab2_s2_col2, tab2_s2_col3 = st.columns([2.5, 4, 4])
-    
+
     target = TARGET_UFLS if ls_scheme == "UFLS" else TARGET_UVLS if ls_scheme == "UVLS" else TARGET_EMLS
 
     with tab2_s2_col1:
@@ -104,12 +104,11 @@ def ls_reviewer():
         available_assignment = loadshedding.automatic_loadshedding_rly()
         remove_duplicate = available_assignment.drop_duplicates(
             subset=['local_trip_id', 'mnemonic', 'feeder_id'], keep='first')
-        
+
         # df_id_duplicates = available_assignment[available_assignment.duplicated(subset=['local_trip_id', 'mnemonic', 'feeder_id'], keep=False)]
         # st.dataframe(df_id_duplicates)
 
         avail_qunatum_mw = remove_duplicate["Pload (MW)"].sum()
-
 
         north_avail_MW = load_profile_metric(remove_duplicate, "North")
         kValley_avail_MW = load_profile_metric(remove_duplicate, "KlangValley")
@@ -148,7 +147,5 @@ def ls_reviewer():
 
         with tab2_s3_col3:
             pass
-        
-        st.divider()
 
-        
+        st.divider()

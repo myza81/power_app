@@ -38,7 +38,7 @@ def column_data_list(
 def ls_data_viewer() -> None:
     load_profile_df = st.session_state["load_profile"] 
     loadshedding = st.session_state["loadshedding"]
-    
+
     ufls_assignment = loadshedding.ufls_assignment
     ufls_setting = loadshedding.ufls_setting
     uvls_setting = loadshedding.uvls_setting
@@ -47,7 +47,7 @@ def ls_data_viewer() -> None:
     loadshedding_dp = loadshedding.merged_dp()
 
     st.subheader("Active Load Sheddding Assignment")
-    
+
     ########## debugging info ##########
 
     # st.dataframe(loadshedding.merged_dp_with_flaglist())
@@ -81,7 +81,7 @@ def ls_data_viewer() -> None:
     with col2_2:
         ls_stage_options = ufls_setting.columns.tolist()
         if len(ls_scheme) == 1 and ls_scheme[0] == "UVLS":
-                ls_stage_options = uvls_setting.columns.tolist()
+            ls_stage_options = uvls_setting.columns.tolist()
 
         stage_selected = st.multiselect(
             label="Operating Stage", options=ls_stage_options
@@ -93,7 +93,7 @@ def ls_data_viewer() -> None:
             label="Tripping Assignment",
             options=ls_dp,
         )
-    
+
     filters ={
         "review_year": review_year,
         "scheme": ls_scheme,
@@ -106,14 +106,14 @@ def ls_data_viewer() -> None:
         "ls_dp": trip_assignment,
     }
 
-
     if "load_profile" not in st.session_state:
         st.info("Please upload or set a load profile first.")
         return
 
-    filtered_data = loadshedding.filtered_data(filters=filters)
+    loadshedding_df = loadshedding.loadshedding_assignments()
+    filtered_data = loadshedding.filtered_data(filters=filters, df=loadshedding_df)
 
-    if isinstance(filtered_data, pd.DataFrame):
+    if not filtered_data.empty:
         search_query = st.text_input(
                 label="Search for a Keyword:",
                 placeholder="Enter your search keyword here...", 

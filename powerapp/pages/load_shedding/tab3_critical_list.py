@@ -79,8 +79,7 @@ def critical_list():
 
         filtered_data = loadshedding.filtered_data(filters=filters, df=remove_duplicate)
 
-        if isinstance(filtered_data, pd.DataFrame):      
-            
+        if not filtered_data.empty:      
             if not flaglist.empty:
                 filtered_df = df_search_filter(flaglist, search_query)
                 # st.dataframe(
