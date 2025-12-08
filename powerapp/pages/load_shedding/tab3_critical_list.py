@@ -77,38 +77,31 @@ def critical_list():
         dp = loadshedding.dp_grpId_loadquantum()
 
         flaglist = dp.loc[(dp['critical_list'] == 'dn') | (
-                dp['critical_list'] == 'gso')][['mnemonic', 'kV', 'feeder_id', 'local_trip_id', 'critical_list', 'short_text', 'long_text']]
+                dp['critical_list'] == 'gso')]
         
         remove_duplicate = flaglist.drop_duplicates(
             subset=['local_trip_id', 'mnemonic', 'feeder_id'], keep='first')
+        
+        ## temp debug ##
+        st.divider()
+        st.subheader("List of Critical Load from GSO & DSO")
         st.write(remove_duplicate)
+        st.divider()
+        ## temp debug ##
 
-    #     filtered_data = loadshedding.filtered_data(filters=filters, df=remove_duplicate)
+        filtered_data = loadshedding.filtered_data(filters=filters, df=remove_duplicate)
 
-    #     if not filtered_data.empty:      
-    #         if not flaglist.empty:
-    #             filtered_df = df_search_filter(flaglist, search_query)
-    #             # st.dataframe(
-    #             #     filtered_df,
-    #             #     column_order=['mnemonic', 'kV', "assignment_id", "short_text", "critical_list"],
-    #             #     width="stretch",
-    #             #     hide_index=True
-    #             # )
-    #         else:
-    #             pass
-    #             # st.write(overlap_list)
-    #     else:
-    #         st.info("No active load shedding assignment found for the selected filters.")
-
-    #     # flag_list = loadshedding.flaglist()
-
-    #     # filtered_df = df_search_filter(flag_list, search_query)
-    #     # st.dataframe(
-    #     #     filtered_df,
-    #     #     column_order=["local_trip_id", "short_text", "category"],
-    #     #     width="stretch"
-    #     # )
-
+        if not flaglist.empty and not filtered_data.empty:      
+            
+                filtered_df = df_search_filter(flaglist, search_query)
+                st.dataframe(
+                    filtered_df,
+                    column_order=['mnemonic', 'kV', "assignment_id", "short_text", "critical_list"],
+                    width="stretch",
+                    hide_index=True
+                )
+        else:
+            st.info("No active load shedding assignment found for the selected filters.")
 
 
 def flaglist_filter_section(

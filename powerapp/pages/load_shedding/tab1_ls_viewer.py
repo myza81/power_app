@@ -100,6 +100,7 @@ def ls_data_viewer() -> None:
         "UFLS": stage_selected,
         "UVLS": stage_selected,
         "EMLS": stage_selected,
+        "op_stage": stage_selected,
         "mnemonic": [],
         "zone": zone_selected,
         "gm_subzone": subzone_selected,

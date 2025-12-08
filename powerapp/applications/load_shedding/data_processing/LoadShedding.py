@@ -445,8 +445,13 @@ class LoadShedding:
     def filtered_data(self, filters: Dict, df: pd.DataFrame) -> pd.DataFrame:
         """Applies filtering on the loadshedding assignments based on the provided filter criteria in the 'filters' dictionary. It merges the load shedding assignments with the substation metadata for enriched filtering."""
 
+ 
+
         review_year = filters.get("review_year", None)
         scheme = filters.get("scheme", None)
+        op_stage = filters.get("op_stage", None)
+    
+
         loadshed_scheme = ["UFLS", "UVLS", "EMLS"]
 
         if df is None or df.empty or review_year is None:
@@ -494,6 +499,12 @@ class LoadShedding:
 
         df = df[cols_to_keep]
 
+
+        selected_ls_cols_dict = {}
+        for ls_review in selected_ls_review:
+            selected_ls_cols_dict[ls_review] = filters.get("op_stage", [])
+        print("selected_ls_cols_dict", selected_ls_cols_dict)
+
         for col, selected in filters.items():
             if selected is None or selected == [] or col not in df.columns:
                 continue
@@ -504,5 +515,10 @@ class LoadShedding:
 
         if df.empty:
             return pd.DataFrame()
+        
+        is_missing = df[selected_ls_review].isin(["nan", "#na"]) | df[selected_ls_review].isna()
+        ls_active = ~is_missing
+        ls_rows_to_keep = ls_active.any(axis=1)
+        df_active = df.loc[ls_rows_to_keep]
 
-        return df
+        return df_active
