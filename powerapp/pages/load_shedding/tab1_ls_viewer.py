@@ -110,8 +110,8 @@ def ls_data_viewer() -> None:
         st.info("Please upload or set a load profile first.")
         return
 
-    loadshedding_df = loadshedding.loadshedding_assignments()
-    filtered_data = loadshedding.filtered_data(filters=filters, df=loadshedding_df)
+    masterlist_ls = loadshedding.ls_assignment_masterlist()
+    filtered_data = loadshedding.filtered_data(filters=filters, df=masterlist_ls)
 
     if not filtered_data.empty:
         search_query = st.text_input(
@@ -120,9 +120,15 @@ def ls_data_viewer() -> None:
                 key="active_ls_search_box",
             )
         filtered_df = df_search_filter(filtered_data, search_query)
+        ls_cols = [col for col in filtered_df.columns if any(
+            keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])]
+        other_cols = ["zone", "gm_subzone", "substation_name", "mnemonic", "kV", "breaker_id", "ls_dp", "assignment_id", "Pload (MW)"]
+        insertion_point = other_cols.index("kV") + 1
+        col_seq = other_cols[:insertion_point] + ls_cols + other_cols[insertion_point:]
+
         st.dataframe(
             filtered_df, 
-            column_order=["zone", "gm_subzone", "substation_name", "mnemonic", "kV", "UFLS", "UVLS", "EMLS", "breaker_id", "ls_dp", "assignment_id", "Pload (MW)"],
+            column_order=col_seq,
             width="stretch"
         )
 

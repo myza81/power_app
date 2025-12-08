@@ -8,13 +8,14 @@ from applications.load_shedding.data_processing.helper import columns_list
 
 def critical_list():
     loadshedding = st.session_state["loadshedding"]
+    ufls_assignment = loadshedding.ufls_assignment
     ufls_setting = loadshedding.ufls_setting
     uvls_setting = loadshedding.uvls_setting
     zone_mapping = loadshedding.zone_mapping
 
     ########## debugging info ##########
 
-    # st.dataframe(loadshedding.flaglist_overlap_active_loadshedding())
+    # st.dataframe(loadshedding.ls_assignment_masterlist())
     # st.dataframe(loadshedding.flaglist_ls_assignment_mapping())
     # st.divider()
 
@@ -25,30 +26,35 @@ def critical_list():
         "Overlap Critical Load List with Existing Load Shedding Scheme")
     
     filters, search_query = flaglist_filter_section(
-        ufls_assignment=ufls_setting,
+        ufls_assignment=ufls_assignment,
         ufls_setting=ufls_setting,
         uvls_setting=uvls_setting,
         zone_mapping=zone_mapping,
         key_prefix="overlap_flaglist"
     )
 
-    filtered_data = loadshedding.filtered_data(filters=filters)
+    masterlist_ls = loadshedding.ls_assignment_masterlist()
+    overlap_list = masterlist_ls.loc[(masterlist_ls['critical_list'] == 'dn') | (
+            masterlist_ls['critical_list'] == 'gso')]
+    
+    filtered_data = loadshedding.filtered_data(filters=filters, df=overlap_list)
 
-    if isinstance(filtered_data, pd.DataFrame):
-        overlap_list = filtered_data.loc[(filtered_data['critical_list'] == 'dn') | (
-            filtered_data['critical_list'] == 'gso')]
-        
-        if not overlap_list.empty:
-            filtered_df = df_search_filter(overlap_list, search_query)
-            st.dataframe(
-                filtered_df,
-                column_order=["UFLS", "UVLS",
-                              "EMLS", 'mnemonic', 'kV', "assignment_id", "short_text"],
-                width="stretch",
-                hide_index=True
-            )
-        else:
-            st.write(overlap_list)
+    if not filtered_data.empty:
+
+        filtered_df = df_search_filter(filtered_data, search_query)
+
+        ls_cols = [col for col in filtered_df.columns if any(
+        keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])]
+        other_cols = ['mnemonic', 'kV', "assignment_id", "short_text"]
+        col_seq = ls_cols + other_cols
+
+        st.dataframe(
+            filtered_df,
+            column_order=col_seq,
+            width="stretch",
+            hide_index=True
+        )
+
     else:
         st.info("No active load shedding assignment found for the selected filters.")
 
@@ -61,7 +67,7 @@ def critical_list():
 
     if show_all_warning_list:
         filters, search_query = flaglist_filter_section(
-            ufls_assignment=ufls_setting,
+            ufls_assignment=ufls_assignment,
             ufls_setting=ufls_setting,
             uvls_setting=uvls_setting,
             zone_mapping=zone_mapping,
@@ -77,31 +83,31 @@ def critical_list():
             subset=['local_trip_id', 'mnemonic', 'feeder_id'], keep='first')
         st.write(remove_duplicate)
 
-        filtered_data = loadshedding.filtered_data(filters=filters, df=remove_duplicate)
+    #     filtered_data = loadshedding.filtered_data(filters=filters, df=remove_duplicate)
 
-        if not filtered_data.empty:      
-            if not flaglist.empty:
-                filtered_df = df_search_filter(flaglist, search_query)
-                # st.dataframe(
-                #     filtered_df,
-                #     column_order=['mnemonic', 'kV', "assignment_id", "short_text", "critical_list"],
-                #     width="stretch",
-                #     hide_index=True
-                # )
-            else:
-                pass
-                # st.write(overlap_list)
-        else:
-            st.info("No active load shedding assignment found for the selected filters.")
+    #     if not filtered_data.empty:      
+    #         if not flaglist.empty:
+    #             filtered_df = df_search_filter(flaglist, search_query)
+    #             # st.dataframe(
+    #             #     filtered_df,
+    #             #     column_order=['mnemonic', 'kV', "assignment_id", "short_text", "critical_list"],
+    #             #     width="stretch",
+    #             #     hide_index=True
+    #             # )
+    #         else:
+    #             pass
+    #             # st.write(overlap_list)
+    #     else:
+    #         st.info("No active load shedding assignment found for the selected filters.")
 
-        # flag_list = loadshedding.flaglist()
+    #     # flag_list = loadshedding.flaglist()
 
-        # filtered_df = df_search_filter(flag_list, search_query)
-        # st.dataframe(
-        #     filtered_df,
-        #     column_order=["local_trip_id", "short_text", "category"],
-        #     width="stretch"
-        # )
+    #     # filtered_df = df_search_filter(flag_list, search_query)
+    #     # st.dataframe(
+    #     #     filtered_df,
+    #     #     column_order=["local_trip_id", "short_text", "category"],
+    #     #     width="stretch"
+    #     # )
 
 
 

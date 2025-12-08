@@ -38,8 +38,8 @@ if load_profile_uploader is not None:
 if load_profile_df is not None:
     st.session_state["loadshedding"] = LoadShedding(load_profile=load_profile_df)
 
-    tab1, tab2, tab3 = st.tabs(
-        ["Data Viewer", "Reviewer", "Critical Load List"]
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["Data Viewer", "Reviewer", "Critical Load List", "Debugging"]
     )
 
     with tab1:
@@ -47,7 +47,15 @@ if load_profile_df is not None:
         st.divider()
         ls_data_viewer()
     with tab2:
-        ls_reviewer()
+        # ls_reviewer()
+        st.divider()
     with tab3:
         critical_list()
+        st.divider()
+    with tab4:
+        st.subheader("Debugging Info")
+        loadshedding = st.session_state["loadshedding"]
+        st.dataframe(loadshedding.ls_assignment_masterlist())
+
+    
     

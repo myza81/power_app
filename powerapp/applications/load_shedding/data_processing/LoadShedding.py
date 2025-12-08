@@ -32,25 +32,22 @@ def log_error(message: str) -> None:
 def get_path(filename: str, data_dir: str = "data") -> str:
     return os.path.join(data_dir, filename)
 
+
 def loadshedding_masterlist(ls_df, scheme):
     ls_assignment = ls_df.copy() if ls_df is not None else pd.DataFrame()
-
     mapping_cols = {
         col: f"{scheme}_{col}" for col in ls_assignment.columns if col != "assignment_id"
     }
     ls_assignment.rename(columns=mapping_cols, inplace=True)
 
-    # review_year_list = columns_list(ls_assignment, unwanted_el=["assignment_id"])
-    # cols_name = [f"{scheme}_{year}" for year in review_year_list]
-    print(ls_assignment.columns)
-
-    # ls_assignment.rename({})
+    return ls_assignment
 
 
 def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
     ls_assignment = ls_df.copy() if ls_df is not None else pd.DataFrame()
 
-    review_year_list = columns_list(ls_assignment, unwanted_el=["assignment_id"])
+    review_year_list = columns_list(
+        ls_assignment, unwanted_el=["assignment_id"])
 
     latest_review = review_year
 
@@ -78,15 +75,21 @@ class LoadShedding:
     def __init__(self, load_profile: pd.DataFrame, data_dir: str = "data") -> None:
         self.load_profile = load_profile.copy()
 
-        self.ufls_assignment = read_ls_data(get_path("assignment_ufls.xlsx", data_dir))
+        self.ufls_assignment = read_ls_data(
+            get_path("assignment_ufls.xlsx", data_dir))
         if self.ufls_assignment is not None:
-            self.ufls_assignment.columns = self.ufls_assignment.columns.astype(str)
-        self.uvls_assignment = read_ls_data(get_path("assignment_uvls.xlsx", data_dir))
+            self.ufls_assignment.columns = self.ufls_assignment.columns.astype(
+                str)
+        self.uvls_assignment = read_ls_data(
+            get_path("assignment_uvls.xlsx", data_dir))
         if self.uvls_assignment is not None:
-            self.uvls_assignment.columns = self.uvls_assignment.columns.astype(str)
-        self.emls_assignment = read_ls_data(get_path("assignment_emls.xlsx", data_dir))
+            self.uvls_assignment.columns = self.uvls_assignment.columns.astype(
+                str)
+        self.emls_assignment = read_ls_data(
+            get_path("assignment_emls.xlsx", data_dir))
         if self.emls_assignment is not None:
-            self.emls_assignment.columns = self.emls_assignment.columns.astype(str)
+            self.emls_assignment.columns = self.emls_assignment.columns.astype(
+                str)
         self.ufls_setting = pd.DataFrame(UFLS_SETTING)
         self.uvls_setting = pd.DataFrame(UVLS_SETTING)
 
@@ -100,9 +103,11 @@ class LoadShedding:
         self.hvcb_rly_loc = read_ls_data(get_path("rly_hvcb.xlsx", data_dir))
 
         # rly_lvcb.xlsx = UFLS & UVLS relay bay assignment installed for incomer (LVCB)
-        self.incomer_rly_loc = read_ls_data(get_path("rly_incomer.xlsx", data_dir))
+        self.incomer_rly_loc = read_ls_data(
+            get_path("rly_incomer.xlsx", data_dir))
 
-        self.flaglist_gso = read_ls_data(get_path("flaglist_gso.xlsx", data_dir))
+        self.flaglist_gso = read_ls_data(
+            get_path("flaglist_gso.xlsx", data_dir))
         self.flaglist_incomer = read_ls_data(
             get_path("flaglist_incomer.xlsx", data_dir)
         )
@@ -242,10 +247,34 @@ class LoadShedding:
 
     def ls_assignment_masterlist(self):
         ufls = loadshedding_masterlist(self.ufls_assignment, 'UFLS')
+        uvls = loadshedding_masterlist(self.uvls_assignment, 'UVLS')
+        emls = loadshedding_masterlist(self.emls_assignment, 'EMLS')
 
+        if ufls.empty or uvls.empty or emls.empty:
+            return pd.DataFrame()
 
+        ls_masterlist = reduce(
+            lambda left, right: pd.merge(
+                left, right, on="assignment_id", how="outer"
+            ),
+            [ufls, uvls, emls],
+        )
+        ls_masterlist = ls_masterlist.fillna("nan")
+        ls_masterlist = ls_masterlist.astype(str)
 
-    def loadshedding_assignments(
+        ls_master_w_load = pd.DataFrame()
+        if not self.dp_grpId_loadquantum().empty:
+            ls_master_w_load = pd.merge(
+                ls_masterlist,
+                self.dp_grpId_loadquantum(),
+                left_on="assignment_id",
+                right_on="assignment_id",
+                how="left",
+            )
+
+        return ls_master_w_load
+
+    def loadshedding_assignments_filter(
         self, review_year: Optional[str] = None, scheme: Optional[list[str]] = None
     ) -> pd.DataFrame:
         """Combines UFLS, UVLS, or EMLS assignments into a single DataFrame - based on the selected schemes. It return a list of selected load shedding on a selected year of review with its associated load quantum i.e ['UFLS assignment', 'UVLS assignment', ...].
@@ -269,10 +298,6 @@ class LoadShedding:
 
         if scheme is None or not scheme:
             scheme = ["UFLS", "UVLS", "EMLS"]
-
-        ls_assignment = {
-            "UFLS"
-        }
 
         assignments: Dict[str, pd.DataFrame] = {
             "UFLS": ls_active(
@@ -417,34 +442,67 @@ class LoadShedding:
 
         return total_potential_mw
 
-    def filtered_data(self, filters: Dict, df:pd.DataFrame) -> pd.DataFrame:
+    def filtered_data(self, filters: Dict, df: pd.DataFrame) -> pd.DataFrame:
         """Applies filtering on the loadshedding assignments based on the provided filter criteria in the 'filters' dictionary. It merges the load shedding assignments with the substation metadata for enriched filtering."""
-
-        # if (
-        #     self.loadshedding_assignments().empty and df is None
-        # ) or self.subs_metadata_enrichment().empty:
-        #     return pd.DataFrame()
-
-        print(df)
 
         review_year = filters.get("review_year", None)
         scheme = filters.get("scheme", None)
+        loadshed_scheme = ["UFLS", "UVLS", "EMLS"]
 
-        ls_assignment = self.loadshedding_assignments(
-            review_year=review_year, scheme=scheme
-        ).copy(deep=True)
-
-        for col, selected in filters.items():
-            if selected is None or selected == []:
-                continue
-            if col not in ls_assignment.columns:
-                continue
-            if isinstance(selected, (list, tuple, set)):
-                ls_assignment = ls_assignment[ls_assignment[col].isin(selected)]
-            else:
-                ls_assignment = ls_assignment[ls_assignment[col] == selected]
-
-        if ls_assignment.empty:
+        if df is None or df.empty or review_year is None:
             return pd.DataFrame()
 
-        return ls_assignment
+        if scheme is None or not scheme:
+            scheme = loadshed_scheme
+
+        all_df_columns = df.columns
+        other_cols_to_keep = [col for col in all_df_columns if not any(
+            keyword in col for keyword in loadshed_scheme)]
+
+        related_scheme = [
+            item for item in all_df_columns
+            if any(keyword in item for keyword in scheme)
+        ]
+
+        assignment_year = {}
+        for item in related_scheme:
+            parts = item.split('_')
+
+            if len(parts) == 2:
+                scheme_type = parts[0]
+                year = parts[1]
+                assignment_year.setdefault(scheme_type, []).append(year)
+
+        selected_ls_review = []
+        target_review_year = str(review_year)
+
+        for ls_scheme in scheme:
+            available_years = list(assignment_year.get(ls_scheme, []))
+            if not available_years:
+                continue
+
+            final_year = None
+            if target_review_year in available_years:
+                final_year = target_review_year
+            else:
+                available_years.sort(reverse=True)
+                final_year = available_years[0]
+
+            selected_ls_review.append(f"{ls_scheme}_{final_year}")
+
+        cols_to_keep = other_cols_to_keep + selected_ls_review
+
+        df = df[cols_to_keep]
+
+        for col, selected in filters.items():
+            if selected is None or selected == [] or col not in df.columns:
+                continue
+            if isinstance(selected, (list, tuple, set)):
+                df = df[df[col].isin(selected)]
+            else:
+                df = df[df[col] == selected]
+
+        if df.empty:
+            return pd.DataFrame()
+
+        return df
