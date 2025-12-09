@@ -97,11 +97,7 @@ def ls_data_viewer() -> None:
     filters ={
         "review_year": review_year,
         "scheme": ls_scheme,
-        "UFLS": stage_selected,
-        "UVLS": stage_selected,
-        "EMLS": stage_selected,
         "op_stage": stage_selected,
-        "mnemonic": [],
         "zone": zone_selected,
         "gm_subzone": subzone_selected,
         "ls_dp": trip_assignment,
@@ -128,12 +124,10 @@ def ls_data_viewer() -> None:
         col_seq = other_cols[:insertion_point] + ls_cols + other_cols[insertion_point:]
 
         st.dataframe(
-            filtered_df, 
-            column_order=col_seq,
-            width="stretch"
+            filtered_df, column_order=col_seq, width="stretch", hide_index=True
         )
 
-        SCHEME_COLUMNS = ['UFLS', 'UVLS', "EMLS"]
+        SCHEME_COLUMNS = ls_cols
         for scheme in SCHEME_COLUMNS:
             if scheme in filtered_data.columns:
                 display_ls_metrics(

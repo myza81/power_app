@@ -30,9 +30,9 @@ def ls_reviewer():
 
     ########## debugging info ##########
 
-    st.dataframe(loadshedding.loadshedding_assignments())
+    # st.dataframe(loadshedding.loadshedding_assignments())
     # st.dataframe(loadshedding.dp_grpId_loadquantum())
-    st.divider()
+    # st.divider()
 
     ########## debugging info ##########
 

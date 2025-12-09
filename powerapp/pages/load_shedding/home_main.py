@@ -47,7 +47,7 @@ if load_profile_df is not None:
         st.divider()
         ls_data_viewer()
     with tab2:
-        # ls_reviewer()
+        ls_reviewer()
         st.divider()
     with tab3:
         critical_list()
@@ -55,7 +55,4 @@ if load_profile_df is not None:
     with tab4:
         st.subheader("Debugging Info")
         loadshedding = st.session_state["loadshedding"]
-        st.dataframe(loadshedding.ls_assignment_masterlist())
-
-    
-    
+        st.dataframe(loadshedding.automatic_loadshedding_rly())

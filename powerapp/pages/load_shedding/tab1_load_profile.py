@@ -51,7 +51,7 @@ def display_load_profile():
 
         col_f1, col_f2 = st.columns(2)
         col_f1.metric(
-            f"Active Power MD",
+            f"Maximum Demand (MD)",
             f"{int(total_mw):,} MW",
         )
 
@@ -59,20 +59,20 @@ def display_load_profile():
             colf2_1, colf2_2 = st.columns(2)
             with colf2_1:
                 st.metric(
-                    label="North",
+                    label="North Demand",
                     value=f"{int(north_MW):,} MW",
                 )
                 st.metric(
-                    label="Klang Valley",
+                    label="Klang Valley Demand",
                     value=f"{int(kValley_MW):,} MW",
                 )
             with colf2_2:
                 st.metric(
-                    label="South",
+                    label="South Demand",
                     value=f"{int(south_MW):,} MW",
                 )
                 st.metric(
-                    label="East",
+                    label="East Demand",
                     value=f"{int(east_MW):,} MW",
                 )
 

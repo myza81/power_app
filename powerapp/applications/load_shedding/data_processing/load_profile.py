@@ -24,7 +24,9 @@ def load_profile_enrichment(df):
 def load_profile_metric(df, zone, scheme=None):
     df_filtered = df
     if scheme is not None:
-        df_filtered = df[df[scheme].notna()]
+
+        is_scheme_valid = df[scheme].notna() & (df[scheme] != "nan") & (df[scheme] != "#na")
+        df_filtered = df[is_scheme_valid]
     zone_MW = df_filtered.groupby(
         ["zone"],
         as_index=False,
