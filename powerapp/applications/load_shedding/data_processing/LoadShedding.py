@@ -173,7 +173,7 @@ class LoadShedding:
             merged_dp,
             flaglist,
             left_on="local_trip_id",
-            right_on="local_trip_id",
+            right_on="local_trip_id", ## "local_trip_id"
             how="left",
         )
 

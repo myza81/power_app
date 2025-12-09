@@ -17,110 +17,8 @@ def critical_list():
     subs_metadata = loadshedding.subs_metadata_enrichment()
     dp_flaglist = loadshedding.merged_dp_with_flaglist()
 
-    ## sub-section 1: Overlap Critical Load List ##
-    st.subheader(
-        "Overlap Critical Load List with Existing Load Shedding Scheme")
-
-    # --- Layout setup ---
-    col1, col2, col3 = st.columns(3)
-    col4, col5, col6 = st.columns(3)
-
-    # --- Column 1: Review Year ---
-    with col1:
-        review_year_list = ufls_assignment.columns.drop(
-            "assignment_id", errors="ignore"
-        ).tolist()
-        review_year_list.sort(reverse=True)
-        review_year = st.selectbox(
-            label="Review Year",
-            options=review_year_list,
-            key="overlap_flaglist_review_year",
-        )
-
-    # --- Column 2: Scheme ---
-    with col2:
-        ls_scheme = st.multiselect(
-            label="Scheme",
-            options=["UFLS", "UVLS", "EMLS"],
-            key="overlap_flaglist_scheme",
-        )
-
-    # --- Column 3: Operating Stage ---
-    with col3:
-        ls_stage_options = ufls_setting.columns.tolist()
-        if len(ls_scheme) == 1 and ls_scheme[0] == "UVLS":
-            ls_stage_options = uvls_setting.columns.tolist()
-
-        stage_selected = st.multiselect(
-            label="Operating Stage",
-            options=ls_stage_options,
-            key="overlap_flaglist_stage",
-        )
-
-    # --- Column 4: Zone ---
-    with col4:
-        zone = sorted(set(zone_mapping.values()))
-        zone_selected = st.multiselect(
-            label="Zone Location",
-            options=zone,
-            key="overlap_flaglist_zone",
-        )
-
-    # --- Column 5: Search Box ---
-    with col5:
-        subzone = column_data_list(
-                subs_metadata,
-                "gm_subzone",
-            )
-        subzone_selected = st.multiselect(
-            label="GM Subzone",
-            options=subzone,
-            key="overlap_flaglist_subzone",
-        )
-
-    with col6:
-        search_query = st.text_input(
-            label="Search for a Keyword:",
-            placeholder="Enter your search keyword here...",
-            key="overlap_flaglist_search_box",
-        )
-    filters = {
-        "review_year": review_year,
-        "scheme": ls_scheme,
-        "op_stage": stage_selected,
-        "zone": zone_selected,
-        "gm_subzone": subzone_selected,
-    }
-
-    masterlist_ls = loadshedding.ls_assignment_masterlist()
-    overlap_list = masterlist_ls.loc[(masterlist_ls['critical_list'] == 'dn') | (
-            masterlist_ls['critical_list'] == 'gso')]
-
-    filtered_data = loadshedding.filtered_data(filters=filters, df=overlap_list)
-
-    if not filtered_data.empty:
-
-        filtered_df = df_search_filter(filtered_data, search_query)
-
-        ls_cols = [col for col in filtered_df.columns if any(
-        keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])]
-        other_cols = ['mnemonic', 'kV', "assignment_id", "short_text"]
-        col_seq = ls_cols + other_cols
-
-        st.dataframe(
-            filtered_df,
-            column_order=col_seq,
-            width="stretch",
-            hide_index=True
-        )
-
-    else:
-        st.info("No active load shedding assignment found for the selected filters.")
-
-    st.divider()
-
     #########################################################
-    ##      sub-section 2: All Critical Load List          ##
+    ##      sub-section 1: List of Critical Load          ##
     #########################################################
     st.subheader("List of Critical Load from GSO & DSO")
     show_all_warning_list = st.checkbox(
@@ -209,6 +107,120 @@ def critical_list():
 
         else:
             st.info("No active load shedding assignment found for the selected filters.")
+        
+        st.write(len(remove_duplicate))
+
+    st.divider()
+        
+    #########################################################
+    ##      sub-section 2: Overlap Critical Load List       ##
+    #########################################################
+    st.subheader(
+        "Overlap Critical Load List with Existing Load Shedding Scheme")
+    
+    show_overlap_list = st.checkbox(
+        "**Show Overlap Critical Load List**", value=False)
+    
+    if show_overlap_list:
+        col1, col2, col3 = st.columns(3)
+        col4, col5, col6 = st.columns(3)
+
+        # --- Column 1: Review Year ---
+        with col1:
+            review_year_list = ufls_assignment.columns.drop(
+                "assignment_id", errors="ignore"
+            ).tolist()
+            review_year_list.sort(reverse=True)
+            review_year = st.selectbox(
+                label="Review Year",
+                options=review_year_list,
+                key="overlap_flaglist_review_year",
+            )
+
+        # --- Column 2: Scheme ---
+        with col2:
+            ls_scheme = st.multiselect(
+                label="Scheme",
+                options=["UFLS", "UVLS", "EMLS"],
+                key="overlap_flaglist_scheme",
+            )
+
+        # --- Column 3: Operating Stage ---
+        with col3:
+            ls_stage_options = ufls_setting.columns.tolist()
+            if len(ls_scheme) == 1 and ls_scheme[0] == "UVLS":
+                ls_stage_options = uvls_setting.columns.tolist()
+
+            stage_selected = st.multiselect(
+                label="Operating Stage",
+                options=ls_stage_options,
+                key="overlap_flaglist_stage",
+            )
+
+        # --- Column 4: Zone ---
+        with col4:
+            zone = sorted(set(zone_mapping.values()))
+            zone_selected = st.multiselect(
+                label="Zone Location",
+                options=zone,
+                key="overlap_flaglist_zone",
+            )
+
+        # --- Column 5: Search Box ---
+        with col5:
+            subzone = column_data_list(
+                    subs_metadata,
+                    "gm_subzone",
+                )
+            subzone_selected = st.multiselect(
+                label="GM Subzone",
+                options=subzone,
+                key="overlap_flaglist_subzone",
+            )
+
+        with col6:
+            search_query = st.text_input(
+                label="Search for a Keyword:",
+                placeholder="Enter your search keyword here...",
+                key="overlap_flaglist_search_box",
+            )
+        filters = {
+            "review_year": review_year,
+            "scheme": ls_scheme,
+            "op_stage": stage_selected,
+            "zone": zone_selected,
+            "gm_subzone": subzone_selected,
+        }
+
+        masterlist_ls = loadshedding.ls_assignment_masterlist()
+        overlap_list = masterlist_ls.loc[(masterlist_ls['critical_list'] == 'dn') | (
+                masterlist_ls['critical_list'] == 'gso')]
+
+        filtered_data = loadshedding.filtered_data(filters=filters, df=overlap_list)
+
+        if not filtered_data.empty:
+
+            filtered_df = df_search_filter(filtered_data, search_query)
+
+            ls_cols = [col for col in filtered_df.columns if any(
+            keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])]
+            other_cols = ['mnemonic', 'kV', "assignment_id", "short_text"]
+            col_seq = ls_cols + other_cols
+
+            st.dataframe(
+                filtered_df,
+                column_order=col_seq,
+                width="stretch",
+                hide_index=True
+            )
+
+        else:
+            st.info("No active load shedding assignment found for the selected filters.")
+
+    
+
+    
+    
 
 
 # def flaglist_filter_section(
