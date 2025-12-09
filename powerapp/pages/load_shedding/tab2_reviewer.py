@@ -21,6 +21,8 @@ def ls_reviewer():
 
     loadshedding = st.session_state["loadshedding"]
     ufls_assignment = loadshedding.ufls_assignment
+    uvls_assignment = loadshedding.uvls_assignment
+
     ufls_setting = loadshedding.ufls_setting
     uvls_setting = loadshedding.uvls_setting
 
@@ -57,8 +59,11 @@ def ls_reviewer():
     with tab2_s1_col2:
         ls_scheme = st.selectbox(label="Scheme", options=[
                                  "UFLS", "UVLS", "EMLS"], index=0)
-
+    
+    ######################################
     ## sub-section 2: Review Year Input ##
+    ######################################
+
     tab2_s2_col1, tab2_s2_col2, tab2_s2_col3 = st.columns([2.5, 4, 4])
 
     target = TARGET_UFLS if ls_scheme == "UFLS" else TARGET_UVLS if ls_scheme == "UVLS" else TARGET_EMLS
@@ -95,7 +100,11 @@ def ls_reviewer():
         pass
     st.divider()
 
+
+    #############################################################
     ## sub-section 3: Available Load Shedding Quantum Capacity ##
+    #############################################################
+
     st.subheader("Available Load Shedding Quantum Capacity")
 
     show_table = st.checkbox("**Show Available Load Shedding Quantum Capacity Data**", value=False)
@@ -115,7 +124,7 @@ def ls_reviewer():
         south_avail_MW = load_profile_metric(remove_duplicate, "South")
         east_avail_MW = load_profile_metric(remove_duplicate, "East")
 
-        tab2_s3_col1, tab2_s3_col2, tab2_s3_col3 = st.columns([2.5, 4, 4])
+        tab2_s3_col1, tab2_s3_col2, tab2_s3_col3 = st.columns([2.5, 2.5, 4])
 
         with tab2_s3_col1:
             st.metric(
@@ -148,4 +157,51 @@ def ls_reviewer():
         with tab2_s3_col3:
             pass
 
-        st.divider()
+        st.dataframe(available_assignment)
+
+    st.divider()
+    
+    #############################################################
+    ## sub-section 4: Available Load Shedding Quantum Capacity ##
+    #############################################################
+    st.subheader("Simulator")
+
+    ls_assignment_masterlist = loadshedding.ls_assignment_masterlist()
+
+    tab2_s4_col1, tab2_s4_col2, tab2_s4_col3 = st.columns([2.5, 2.5, 4])
+
+    with tab2_s4_col1:
+        ls_cols = [col for col in ls_assignment_masterlist.columns if any(
+                keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])]
+        current_datetime = pd.to_datetime("now")
+        current_year = current_datetime.year
+        prev_year = current_year - 1
+        target_col = f"UFLS_{prev_year}"
+        default_selection = None
+
+        if target_col in ls_cols:
+            default_selection = target_col
+        else:
+            for col in ls_cols:
+                if "UFLS" in col:
+                    default_selection = col
+                    break
+        if default_selection and default_selection in ls_cols:
+            default_index = ls_cols.index(default_selection)
+        else:
+            default_index = 0
+
+        based_template = st.selectbox(
+            label="Based Template",
+            options=ls_cols,
+            key="simulator_based_template",
+            index=default_index
+        )
+  
+        drop_ls = [col for col in ls_cols if col != based_template]
+        based_ls_df =ls_assignment_masterlist.drop(columns=drop_ls).reset_index(drop=True)
+        
+
+    st.dataframe(based_ls_df)
+
+
