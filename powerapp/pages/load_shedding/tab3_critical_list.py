@@ -230,63 +230,63 @@ def critical_list():
         #########################################################
         st.subheader("Distributions of Overlap Critical Load List with Existing Load Shedding Scheme")
 
-        
         if selected_ls_scheme:
-
             ls_cols = [
                 col
                 for col in masterlist_ls.columns
                 if any(keyword in col for keyword in LOADSHED_SCHEME)
             ]
             selected_scheme = [f"{scheme}_{review_year}" for scheme in selected_ls_scheme]
+            
+            
             drop_ls = [col for col in ls_cols if col not in selected_scheme]
-            selected_ls = masterlist_ls.drop(columns=drop_ls, axis=1)
+            selected_ls = masterlist_ls.drop(columns=drop_ls, axis=1, errors='ignore')
+            # print('selected_ls', selected_ls)
 
-            selected_ls_cols = [
-                col
-                for col in selected_ls.columns
-                if any(keyword in col for keyword in LOADSHED_SCHEME)
-            ]
+            valid_ls_cols = [ls_review for ls_review in selected_scheme if ls_review in masterlist_ls.columns]
+            
+            # selected_ls_cols = [
+            #     col
+            #     for col in selected_ls.columns
+            #     if any(keyword in col for keyword in LOADSHED_SCHEME)
+            # ]
+            # print('selected_ls_cols', selected_ls_cols)
 
-            for selected_ls_review in selected_ls_cols:
+            print('selected_scheme', valid_ls_cols)
+
+            for ls_review in valid_ls_cols:
                 drop_select_ls = [
-                    col for col in selected_ls_cols if col != selected_ls_review
+                    col for col in valid_ls_cols if col != ls_review
                 ]
                 selected_df = selected_ls.drop(columns=drop_select_ls, axis=1)
-                all_quantum_df = selected_df[[selected_ls_review,'critical_list','Pload (MW)']]
-                quantum_ls_stg = all_quantum_df.groupby([selected_ls_review]).agg(
-                    {
-                        "Pload (MW)": "sum",
-                        "critical_list": lambda x: ", ".join(x.astype(str).unique()),
-                    }
-                )
+                all_quantum_df = selected_df[[ls_review,'critical_list','Pload (MW)']]
+                
+                print(all_quantum_df)
+            #     quantum_ls_stg = all_quantum_df.groupby([selected_ls_review]).agg(
+            #         {
+            #             "Pload (MW)": "sum",
+            #             "critical_list": lambda x: ", ".join(x.astype(str).unique()),
+            #         }
+            #     )
 
-                critical_cat = ["dn", "gso"]
-                quantum_critical_list = all_quantum_df.loc[
-                    all_quantum_df["critical_list"].isin(critical_cat)
-                ]
+            #     critical_cat = ["dn", "gso"]
+            #     quantum_critical_list = all_quantum_df.loc[
+            #         all_quantum_df["critical_list"].isin(critical_cat)
+            #     ]
 
-                quantum_ls_critical = quantum_critical_list.groupby(
-                    [selected_ls_review]
-                ).agg(
-                    {
-                        "Pload (MW)": "sum",
-                        "critical_list": lambda x: ", ".join(x.astype(str).unique()),
-                    }
-                )
+            #     quantum_ls_critical = quantum_critical_list.groupby(
+            #         [selected_ls_review]
+            #     ).agg(
+            #         {
+            #             "Pload (MW)": "sum",
+            #             "critical_list": lambda x: ", ".join(x.astype(str).unique()),
+            #         }
+            #     )
 
-                ls_stage = selected_df[selected_ls_review].unique()
-                oper_stage = [
-                    stage
-                    for stage in ls_stage
-                    if stage != "nan"
-                    and stage != "#na"
-                    and stage != "" 
-                    and (stage is not np.nan)
-                    and stage is not None
-                ]
+            #     ls_stage = selected_df[selected_ls_review].unique()
+                
 
-                st.dataframe(quantum_ls_critical)
+            #     st.dataframe(quantum_ls_critical)
         else:
             st.info(
                 "No load shedding assignment found for the selected filters."

@@ -49,7 +49,8 @@ def loadshedding_masterlist(ls_df, scheme):
 def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
     ls_assignment = ls_df.copy() if ls_df is not None else pd.DataFrame()
 
-    review_year_list = columns_list(ls_assignment, unwanted_el=["assignment_id"])
+    review_year_list = columns_list(
+        ls_assignment, unwanted_el=["assignment_id"])
 
     latest_review = review_year
 
@@ -77,15 +78,21 @@ class LoadShedding:
     def __init__(self, load_profile: pd.DataFrame, data_dir: str = "data") -> None:
         self.load_profile = load_profile.copy()
 
-        self.ufls_assignment = read_ls_data(get_path("assignment_ufls.xlsx", data_dir))
+        self.ufls_assignment = read_ls_data(
+            get_path("assignment_ufls.xlsx", data_dir))
         if self.ufls_assignment is not None:
-            self.ufls_assignment.columns = self.ufls_assignment.columns.astype(str)
-        self.uvls_assignment = read_ls_data(get_path("assignment_uvls.xlsx", data_dir))
+            self.ufls_assignment.columns = self.ufls_assignment.columns.astype(
+                str)
+        self.uvls_assignment = read_ls_data(
+            get_path("assignment_uvls.xlsx", data_dir))
         if self.uvls_assignment is not None:
-            self.uvls_assignment.columns = self.uvls_assignment.columns.astype(str)
-        self.emls_assignment = read_ls_data(get_path("assignment_emls.xlsx", data_dir))
+            self.uvls_assignment.columns = self.uvls_assignment.columns.astype(
+                str)
+        self.emls_assignment = read_ls_data(
+            get_path("assignment_emls.xlsx", data_dir))
         if self.emls_assignment is not None:
-            self.emls_assignment.columns = self.emls_assignment.columns.astype(str)
+            self.emls_assignment.columns = self.emls_assignment.columns.astype(
+                str)
         self.ufls_setting = pd.DataFrame(UFLS_SETTING)
         self.uvls_setting = pd.DataFrame(UVLS_SETTING)
 
@@ -99,9 +106,11 @@ class LoadShedding:
         self.hvcb_rly_loc = read_ls_data(get_path("rly_hvcb.xlsx", data_dir))
 
         # rly_lvcb.xlsx = UFLS & UVLS relay bay assignment installed for incomer (LVCB)
-        self.incomer_rly_loc = read_ls_data(get_path("rly_incomer.xlsx", data_dir))
+        self.incomer_rly_loc = read_ls_data(
+            get_path("rly_incomer.xlsx", data_dir))
 
-        self.flaglist_gso = read_ls_data(get_path("flaglist_gso.xlsx", data_dir))
+        self.flaglist_gso = read_ls_data(
+            get_path("flaglist_gso.xlsx", data_dir))
         self.flaglist_incomer = read_ls_data(
             get_path("flaglist_incomer.xlsx", data_dir)
         )
@@ -174,7 +183,7 @@ class LoadShedding:
             merged_dp,
             flaglist,
             left_on="local_trip_id",
-            right_on="local_trip_id", ## "local_trip_id"
+            right_on="local_trip_id",  # "local_trip_id"
             how="left",
         )
 
@@ -248,7 +257,8 @@ class LoadShedding:
             return pd.DataFrame()
 
         ls_masterlist = reduce(
-            lambda left, right: pd.merge(left, right, on="assignment_id", how="outer"),
+            lambda left, right: pd.merge(
+                left, right, on="assignment_id", how="outer"),
             [ufls, uvls, emls],
         )
         ls_masterlist = ls_masterlist.fillna("nan")
@@ -429,7 +439,7 @@ class LoadShedding:
 
     def filtered_data(self, filters: Dict, df: pd.DataFrame) -> pd.DataFrame:
         """Applies filtering on the loadshedding assignments based on the provided filter criteria in the 'filters' dictionary. It merges the load shedding assignments with the substation metadata for enriched filtering."""
-        
+
         LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
         review_year = filters.get("review_year", None)
         scheme = filters.get("scheme", [])
@@ -439,26 +449,29 @@ class LoadShedding:
             return pd.DataFrame()
 
         filtered_df = df.copy()
+        all_df_columns = df.columns
         selected_ls_review = []
         selected_ls_cols_dict = {}
 
         if review_year is not None and scheme:
-            selected_ls_review = [f"{ls_scheme}_{review_year}" for ls_scheme in scheme]
+            selected_ls_review = [
+                f"{ls_scheme}_{review_year}" for ls_scheme in scheme]
             
-            all_df_columns = df.columns
             df_ls_cols = [
                 col
                 for col in all_df_columns
                 if any(keyword in col for keyword in LOADSHED_SCHEME)
             ]
-       
+     
             drop_ls_cols = [
-                        col for col in df_ls_cols if col not in selected_ls_review
-                    ]
-            
-            filtered_df = filtered_df.drop(columns=drop_ls_cols, axis=1)
-        
-        for ls_review in selected_ls_review:
+                col for col in df_ls_cols if col not in selected_ls_review
+            ]
+  
+            filtered_df = filtered_df.drop(columns=drop_ls_cols, axis=1, errors='ignore')
+
+        valid_ls_review = [ls_review for ls_review in selected_ls_review if ls_review in all_df_columns]
+
+        for ls_review in valid_ls_review:
             selected_ls_cols_dict[ls_review] = op_stage
 
         filters.update(selected_ls_cols_dict)
@@ -474,9 +487,11 @@ class LoadShedding:
 
         if filtered_df.empty:
             return pd.DataFrame()
-        
-        if selected_ls_review:
-            filtered_df[selected_ls_review] = filtered_df[selected_ls_review].replace('nan', np.nan)
-            filtered_df = filtered_df.dropna(subset=selected_ls_review, how='all')
+
+        if valid_ls_review:
+            filtered_df[valid_ls_review] = filtered_df[valid_ls_review].replace([
+                'nan', '#na'], np.nan)
+            filtered_df = filtered_df.dropna(
+                subset=valid_ls_review, how='all')
 
         return filtered_df
