@@ -435,11 +435,11 @@ class LoadShedding:
 
         loadshed_scheme = ["UFLS", "UVLS", "EMLS"]
 
-        if df is None or df.empty:
+        if df is None or df.empty or scheme is None or not scheme:
             return pd.DataFrame()
 
-        if scheme is None or not scheme:
-            scheme = loadshed_scheme
+        # if scheme is None or not scheme:
+        #     scheme = loadshed_scheme
 
         all_df_columns = df.columns
         other_cols_to_keep = [
@@ -500,8 +500,6 @@ class LoadShedding:
                 df = df[df[col].isin(selected)]
             else:
                 df = df[df[col] == selected]
-            
-            print(df)
 
         if df.empty:
             return pd.DataFrame()

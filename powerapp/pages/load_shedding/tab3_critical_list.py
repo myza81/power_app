@@ -1,5 +1,7 @@
 import pandas as pd
 import streamlit as st
+import numpy as np
+import plotly.express as px
 from applications.load_shedding.data_processing.load_profile import (
     df_search_filter,
 )
@@ -102,25 +104,25 @@ def critical_list():
                         width="stretch",
                         hide_index=True
                     )
+                st.write(len(remove_duplicate))
+
             else:
                 st.info("No active load shedding assignment found for the selected filters.")
 
         else:
             st.info("No active load shedding assignment found for the selected filters.")
-        
-        st.write(len(remove_duplicate))
 
     st.divider()
-        
+
     #########################################################
     ##      sub-section 2: Overlap Critical Load List       ##
     #########################################################
     st.subheader(
         "Overlap Critical Load List with Existing Load Shedding Scheme")
-    
+
     show_overlap_list = st.checkbox(
         "**Show Overlap Critical Load List**", value=False)
-    
+
     if show_overlap_list:
         col1, col2, col3 = st.columns(3)
         col4, col5, col6 = st.columns(3)
@@ -143,6 +145,7 @@ def critical_list():
                 label="Scheme",
                 options=["UFLS", "UVLS", "EMLS"],
                 key="overlap_flaglist_scheme",
+                default="UFLS",
             )
 
         # --- Column 3: Operating Stage ---
@@ -217,10 +220,74 @@ def critical_list():
         else:
             st.info("No active load shedding assignment found for the selected filters.")
 
-    
+        st.divider()
 
-    
-    
+        #########################################################
+        ##      sub-section 3: Stacked Bar Chart      ##
+        #########################################################
+        st.subheader("Distributions of Overlap Critical Load List with Existing Load Shedding Scheme")
+        if ls_scheme:
+
+            ls_cols = [
+                col
+                for col in masterlist_ls.columns
+                if any(keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])
+            ]
+            selected_scheme = [f"{scheme}_{review_year}" for scheme in ls_scheme]
+            drop_ls = [col for col in ls_cols if col not in selected_scheme]
+            selected_ls = masterlist_ls.drop(columns=drop_ls)
+
+            selected_ls_cols = [
+                col
+                for col in selected_ls.columns
+                if any(keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])
+            ]
+
+            for selected_ls_review in selected_ls_cols:
+                drop_select_ls = [
+                    col for col in selected_ls_cols if col != selected_ls_review
+                ]
+                selected_df = selected_ls.drop(columns=drop_select_ls)
+                all_quantum_df = selected_df[[selected_ls_review,'critical_list','Pload (MW)']]
+                quantum_ls_stg = all_quantum_df.groupby([selected_ls_review]).agg(
+                    {
+                        "Pload (MW)": "sum",
+                        "critical_list": lambda x: ", ".join(x.astype(str).unique()),
+                    }
+                )
+
+                critical_cat = ["dn", "gso"]
+                quantum_critical_list = all_quantum_df.loc[
+                    all_quantum_df["critical_list"].isin(critical_cat)
+                ]
+
+                quantum_ls_critical = quantum_critical_list.groupby(
+                    [selected_ls_review]
+                ).agg(
+                    {
+                        "Pload (MW)": "sum",
+                        "critical_list": lambda x: ", ".join(x.astype(str).unique()),
+                    }
+                )
+
+                ls_stage = selected_df[selected_ls_review].unique()
+                oper_stage = [
+                    stage
+                    for stage in ls_stage
+                    if stage != "nan"
+                    and stage != "#na"
+                    and stage != "" 
+                    and (stage is not np.nan)
+                    and stage is not None
+                ]
+
+                st.dataframe(quantum_ls_critical)
+        else:
+            st.info(
+                "No load shedding assignment found for the selected filters."
+            )
+
+        # st.dataframe(selected_ls)
 
 
 # def flaglist_filter_section(

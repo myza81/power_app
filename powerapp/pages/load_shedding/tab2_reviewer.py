@@ -2,11 +2,10 @@ import pandas as pd
 import streamlit as st
 from typing import List, Optional, Sequence, Tuple, Any
 from datetime import date
-
+from applications.data_processing.read_data import df_search_filter
 from applications.load_shedding.data_processing.helper import columns_list
 from applications.load_shedding.data_processing.load_profile import (
     load_profile_metric,
-    df_search_filter,
 )
 from pages.load_shedding.helper import display_ls_metrics
 
@@ -57,16 +56,21 @@ def ls_reviewer():
         )
 
     with tab2_s1_col2:
-        ls_scheme = st.selectbox(label="Scheme", options=[
-                                 "UFLS", "UVLS", "EMLS"], index=0)
-    
+        ls_scheme = st.selectbox(
+            label="Scheme", options=["UFLS", "UVLS", "EMLS"], index=0
+        )
+
     ######################################
     ## sub-section 2: Review Year Input ##
     ######################################
 
     tab2_s2_col1, tab2_s2_col2, tab2_s2_col3 = st.columns([2.5, 4, 4])
 
-    target = TARGET_UFLS if ls_scheme == "UFLS" else TARGET_UVLS if ls_scheme == "UVLS" else TARGET_EMLS
+    target = (
+        TARGET_UFLS
+        if ls_scheme == "UFLS"
+        else TARGET_UVLS if ls_scheme == "UVLS" else TARGET_EMLS
+    )
 
     with tab2_s2_col1:
         st.metric(
@@ -100,19 +104,21 @@ def ls_reviewer():
         pass
     st.divider()
 
-
     #############################################################
     ## sub-section 3: Available Load Shedding Quantum Capacity ##
     #############################################################
+    available_assignment = loadshedding.automatic_loadshedding_rly()
+    remove_duplicate = available_assignment.drop_duplicates(
+        subset=["local_trip_id", "mnemonic", "feeder_id"], keep="first"
+    )
 
     st.subheader("Available Load Shedding Quantum Capacity")
 
-    show_table = st.checkbox("**Show Available Load Shedding Quantum Capacity Data**", value=False)
+    show_table = st.checkbox(
+        "**Show Available Load Shedding Quantum Capacity Data**", value=False
+    )
 
     if show_table:
-        available_assignment = loadshedding.automatic_loadshedding_rly()
-        remove_duplicate = available_assignment.drop_duplicates(
-            subset=['local_trip_id', 'mnemonic', 'feeder_id'], keep='first')
 
         # df_id_duplicates = available_assignment[available_assignment.duplicated(subset=['local_trip_id', 'mnemonic', 'feeder_id'], keep=False)]
         # st.dataframe(df_id_duplicates)
@@ -160,7 +166,7 @@ def ls_reviewer():
         st.dataframe(available_assignment)
 
     st.divider()
-    
+
     #############################################################
     ## sub-section 4: Available Load Shedding Quantum Capacity ##
     #############################################################
@@ -171,8 +177,11 @@ def ls_reviewer():
     tab2_s4_col1, tab2_s4_col2, tab2_s4_col3 = st.columns([2.5, 2.5, 4])
 
     with tab2_s4_col1:
-        ls_cols = [col for col in ls_assignment_masterlist.columns if any(
-                keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])]
+        ls_cols = [
+            col
+            for col in ls_assignment_masterlist.columns
+            if any(keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])
+        ]
         current_datetime = pd.to_datetime("now")
         current_year = current_datetime.year
         prev_year = current_year - 1
@@ -195,13 +204,55 @@ def ls_reviewer():
             label="Based Template",
             options=ls_cols,
             key="simulator_based_template",
-            index=default_index
+            index=default_index,
         )
-  
+
         drop_ls = [col for col in ls_cols if col != based_template]
-        based_ls_df =ls_assignment_masterlist.drop(columns=drop_ls).reset_index(drop=True)
-        
+        based_ls_df = ls_assignment_masterlist.drop(columns=drop_ls).reset_index(
+            drop=True
+        )
+        based_available_assignment = pd.merge(
+            available_assignment,
+            based_ls_df,
+            on=[
+                "assignment_id",
+                "local_trip_id",
+                "mnemonic",
+                "feeder_id",
+                "breaker_id",
+                "kV",
+                "zone",
+                "gm_subzone",
+                "group_trip_id",
+                "ls_dp",
+                "critical_list",
+                "short_text",
+                "long_text",
+                "Pload (MW)",
+                "Qload (Mvar)",
+                "substation_name",
+            ],
+            how="outer",
+        )
+        assignment_df = based_available_assignment[
+            [
+                "assignment_id",
+                "local_trip_id",
+                "Pload (MW)",
+                based_template,
+                "critical_list",
+                "zone",
+            ]
+        ]
+        grp_df = assignment_df.groupby(
+            ["assignment_id", based_template], as_index=False
+        ).agg(
+            {
+                "Pload (MW)": "sum",
+                "local_trip_id": lambda x: ", ".join(x.astype(str).unique()),
+                "critical_list": lambda x: ", ".join(x.astype(str).unique()),
+                "zone": lambda x: ", ".join(x.astype(str).unique()),
+            }
+        )
 
-    st.dataframe(based_ls_df)
-
-
+    st.dataframe(grp_df)
