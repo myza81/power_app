@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+import numpy as np
 from functools import reduce
 from typing import Optional, Dict, List
 
@@ -428,65 +429,35 @@ class LoadShedding:
 
     def filtered_data(self, filters: Dict, df: pd.DataFrame) -> pd.DataFrame:
         """Applies filtering on the loadshedding assignments based on the provided filter criteria in the 'filters' dictionary. It merges the load shedding assignments with the substation metadata for enriched filtering."""
-
+        
+        LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
         review_year = filters.get("review_year", None)
-        scheme = filters.get("scheme", None)
-        op_stage = filters.get("op_stage", None)
+        scheme = filters.get("scheme", [])
+        op_stage = filters.get("op_stage", [])
 
-        loadshed_scheme = ["UFLS", "UVLS", "EMLS"]
-
-        if df is None or df.empty or scheme is None or not scheme:
+        if df is None or df.empty:
             return pd.DataFrame()
 
-        # if scheme is None or not scheme:
-        #     scheme = loadshed_scheme
-
-        all_df_columns = df.columns
-        other_cols_to_keep = [
-            col
-            for col in all_df_columns
-            if not any(keyword in col for keyword in loadshed_scheme)
-        ]
-
-        related_scheme = [
-            item
-            for item in all_df_columns
-            if any(keyword in item for keyword in scheme)
-        ]
-
-        assignment_year = {}
-        for item in related_scheme:
-            parts = item.split("_")
-
-            if len(parts) == 2:
-                scheme_type = parts[0]
-                year = parts[1]
-                assignment_year.setdefault(scheme_type, []).append(year)
-
+        filtered_df = df.copy()
         selected_ls_review = []
-
-        if review_year is not None:
-            target_review_year = str(review_year)
-
-            for ls_scheme in scheme:
-                available_years = list(assignment_year.get(ls_scheme, []))
-                if not available_years:
-                    continue
-
-                final_year = None
-                if target_review_year in available_years:
-                    final_year = target_review_year
-                else:
-                    available_years.sort(reverse=True)
-                    final_year = available_years[0]
-
-                selected_ls_review.append(f"{ls_scheme}_{final_year}")
-
-        cols_to_keep = other_cols_to_keep + selected_ls_review
-
-        df = df[cols_to_keep]
-
         selected_ls_cols_dict = {}
+
+        if review_year is not None and scheme:
+            selected_ls_review = [f"{ls_scheme}_{review_year}" for ls_scheme in scheme]
+            
+            all_df_columns = df.columns
+            df_ls_cols = [
+                col
+                for col in all_df_columns
+                if any(keyword in col for keyword in LOADSHED_SCHEME)
+            ]
+       
+            drop_ls_cols = [
+                        col for col in df_ls_cols if col not in selected_ls_review
+                    ]
+            
+            filtered_df = filtered_df.drop(columns=drop_ls_cols, axis=1)
+        
         for ls_review in selected_ls_review:
             selected_ls_cols_dict[ls_review] = op_stage
 
@@ -494,23 +465,18 @@ class LoadShedding:
 
         ## Data Filteration #######
         for col, selected in filters.items():
-            if selected is None or selected == [] or col not in df.columns:
+            if selected is None or selected == [] or col not in filtered_df.columns:
                 continue
             if isinstance(selected, (list, tuple, set)):
-                df = df[df[col].isin(selected)]
+                filtered_df = filtered_df[filtered_df[col].isin(selected)]
             else:
-                df = df[df[col] == selected]
+                filtered_df = filtered_df[filtered_df[col] == selected]
 
-        if df.empty:
+        if filtered_df.empty:
             return pd.DataFrame()
-
-        df_active = df
+        
         if selected_ls_review:
-            is_missing = (
-                df[selected_ls_review].isin(["nan", "#na"]) | df[selected_ls_review].isna()
-            )
-            ls_active = ~is_missing
-            ls_rows_to_keep = ls_active.any(axis=1)
-            df_active = df.loc[ls_rows_to_keep]
+            filtered_df[selected_ls_review] = filtered_df[selected_ls_review].replace('nan', np.nan)
+            filtered_df = filtered_df.dropna(subset=selected_ls_review, how='all')
 
-        return df_active
+        return filtered_df

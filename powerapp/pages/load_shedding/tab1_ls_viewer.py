@@ -44,6 +44,8 @@ def ls_data_viewer() -> None:
     zone_mapping = loadshedding.zone_mapping
     loadshedding_dp = loadshedding.merged_dp()
 
+    LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
+
     st.subheader("Active Load Sheddding Assignment")
 
     ########## debugging info ##########
@@ -66,7 +68,8 @@ def ls_data_viewer() -> None:
             review_year = st.selectbox(label="Review Year", options=review_year_list)
 
         with col1_2:
-            ls_scheme = st.multiselect(label="Scheme", options=["UFLS", "UVLS", "EMLS"], default="UFLS")
+            ls_scheme = st.multiselect(label="Scheme", options=LOADSHED_SCHEME, default="UFLS")
+            selected_ls_scheme = LOADSHED_SCHEME if ls_scheme == [] else ls_scheme
 
         with col1_3:
             zone = list(set(zone_mapping.values()))
@@ -81,7 +84,7 @@ def ls_data_viewer() -> None:
 
         with col2_2:
             ls_stage_options = ufls_setting.columns.tolist()
-            if len(ls_scheme) == 1 and ls_scheme[0] == "UVLS":
+            if len(selected_ls_scheme) == 1 and selected_ls_scheme[0] == "UVLS":
                 ls_stage_options = uvls_setting.columns.tolist()
 
             stage_selected = st.multiselect(
@@ -97,7 +100,7 @@ def ls_data_viewer() -> None:
 
         filters ={
             "review_year": review_year,
-            "scheme": ls_scheme,
+            "scheme": selected_ls_scheme,
             "op_stage": stage_selected,
             "zone": zone_selected,
             "gm_subzone": subzone_selected,
@@ -119,7 +122,7 @@ def ls_data_viewer() -> None:
                 )
             filtered_df = df_search_filter(filtered_data, search_query)
             ls_cols = [col for col in filtered_df.columns if any(
-                keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])]
+                keyword in col for keyword in LOADSHED_SCHEME)]
             other_cols = ["zone", "gm_subzone", "substation_name", "mnemonic", "kV", "breaker_id", "ls_dp", "assignment_id", "Pload (MW)"]
             insertion_point = other_cols.index("kV") + 1
             col_seq = other_cols[:insertion_point] + ls_cols + other_cols[insertion_point:]

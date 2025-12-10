@@ -208,7 +208,7 @@ def ls_reviewer():
         )
 
         drop_ls = [col for col in ls_cols if col != based_template]
-        based_ls_df = ls_assignment_masterlist.drop(columns=drop_ls).reset_index(
+        based_ls_df = ls_assignment_masterlist.drop(columns=drop_ls, axis=1).reset_index(
             drop=True
         )
         based_available_assignment = pd.merge(

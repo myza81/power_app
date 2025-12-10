@@ -19,6 +19,8 @@ def critical_list():
     subs_metadata = loadshedding.subs_metadata_enrichment()
     dp_flaglist = loadshedding.merged_dp_with_flaglist()
 
+    LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
+
     #########################################################
     ##      sub-section 1: List of Critical Load          ##
     #########################################################
@@ -143,15 +145,16 @@ def critical_list():
         with col2:
             ls_scheme = st.multiselect(
                 label="Scheme",
-                options=["UFLS", "UVLS", "EMLS"],
+                options=LOADSHED_SCHEME,
                 key="overlap_flaglist_scheme",
                 default="UFLS",
             )
+            selected_ls_scheme = LOADSHED_SCHEME if ls_scheme == [] else ls_scheme
 
         # --- Column 3: Operating Stage ---
         with col3:
             ls_stage_options = ufls_setting.columns.tolist()
-            if len(ls_scheme) == 1 and ls_scheme[0] == "UVLS":
+            if len(selected_ls_scheme) == 1 and selected_ls_scheme[0] == "UVLS":
                 ls_stage_options = uvls_setting.columns.tolist()
 
             stage_selected = st.multiselect(
@@ -189,7 +192,7 @@ def critical_list():
             )
         filters = {
             "review_year": review_year,
-            "scheme": ls_scheme,
+            "scheme": selected_ls_scheme,
             "op_stage": stage_selected,
             "zone": zone_selected,
             "gm_subzone": subzone_selected,
@@ -206,7 +209,7 @@ def critical_list():
             filtered_df = df_search_filter(filtered_data, search_query)
 
             ls_cols = [col for col in filtered_df.columns if any(
-            keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])]
+            keyword in col for keyword in LOADSHED_SCHEME)]
             other_cols = ['mnemonic', 'kV', "assignment_id", "short_text"]
             col_seq = ls_cols + other_cols
 
@@ -226,28 +229,30 @@ def critical_list():
         ##      sub-section 3: Stacked Bar Chart      ##
         #########################################################
         st.subheader("Distributions of Overlap Critical Load List with Existing Load Shedding Scheme")
-        if ls_scheme:
+
+        
+        if selected_ls_scheme:
 
             ls_cols = [
                 col
                 for col in masterlist_ls.columns
-                if any(keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])
+                if any(keyword in col for keyword in LOADSHED_SCHEME)
             ]
-            selected_scheme = [f"{scheme}_{review_year}" for scheme in ls_scheme]
+            selected_scheme = [f"{scheme}_{review_year}" for scheme in selected_ls_scheme]
             drop_ls = [col for col in ls_cols if col not in selected_scheme]
-            selected_ls = masterlist_ls.drop(columns=drop_ls)
+            selected_ls = masterlist_ls.drop(columns=drop_ls, axis=1)
 
             selected_ls_cols = [
                 col
                 for col in selected_ls.columns
-                if any(keyword in col for keyword in ["UFLS", "UVLS", "EMLS"])
+                if any(keyword in col for keyword in LOADSHED_SCHEME)
             ]
 
             for selected_ls_review in selected_ls_cols:
                 drop_select_ls = [
                     col for col in selected_ls_cols if col != selected_ls_review
                 ]
-                selected_df = selected_ls.drop(columns=drop_select_ls)
+                selected_df = selected_ls.drop(columns=drop_select_ls, axis=1)
                 all_quantum_df = selected_df[[selected_ls_review,'critical_list','Pload (MW)']]
                 quantum_ls_stg = all_quantum_df.groupby([selected_ls_review]).agg(
                     {
