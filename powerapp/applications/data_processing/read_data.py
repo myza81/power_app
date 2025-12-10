@@ -108,3 +108,15 @@ def find_project_root(start_path, folder_name):
     raise FileNotFoundError(
         f"Could not find a parent directory named '{folder_name}' from {start_path}"
     )
+
+
+def df_search_filter(df: pd.DataFrame, query: str) -> pd.DataFrame:
+    if not query:
+        return df
+
+    df_str = df.astype(str)
+    mask = df_str.apply(
+        lambda row: row.str.contains(query, case=False, na=False).any(), axis=1
+    )
+
+    return df[mask]

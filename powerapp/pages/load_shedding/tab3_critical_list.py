@@ -102,25 +102,25 @@ def critical_list():
                         width="stretch",
                         hide_index=True
                     )
+                st.write(len(remove_duplicate))
+
             else:
                 st.info("No active load shedding assignment found for the selected filters.")
 
         else:
             st.info("No active load shedding assignment found for the selected filters.")
-        
-        st.write(len(remove_duplicate))
 
     st.divider()
-        
+
     #########################################################
     ##      sub-section 2: Overlap Critical Load List       ##
     #########################################################
     st.subheader(
         "Overlap Critical Load List with Existing Load Shedding Scheme")
-    
+
     show_overlap_list = st.checkbox(
         "**Show Overlap Critical Load List**", value=False)
-    
+
     if show_overlap_list:
         col1, col2, col3 = st.columns(3)
         col4, col5, col6 = st.columns(3)
@@ -216,11 +216,6 @@ def critical_list():
 
         else:
             st.info("No active load shedding assignment found for the selected filters.")
-
-    
-
-    
-    
 
 
 # def flaglist_filter_section(
