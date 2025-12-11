@@ -1,26 +1,100 @@
 import streamlit as st
+import pandas as pd
+import plotly.express as px
 
-from applications.load_shedding.data_processing.load_profile import (
+from applications.load_shedding.load_profile import (
     load_profile_metric,
     df_search_filter,
 )
 
 
 def display_load_profile():
+
+    load_profile_df = st.session_state["load_profile"] 
+    total_mw = int(load_profile_df["Pload (MW)"].sum())
+    north_MW = int(load_profile_metric(load_profile_df, "North"))
+    kValley_MW = int(load_profile_metric(load_profile_df, "KlangValley"))
+    south_MW = int(load_profile_metric(load_profile_df, "South"))
+    east_MW = int(load_profile_metric(load_profile_df, "East"))
+
+    tab1_s1_col1, tab1_s1_col2, tab1_s1_col3 = st.columns([2.0,3.5,2.5])
+    with tab1_s1_col1:
+        st.metric(
+            label=f"Maximum Demand (MD)",
+            value=f"{total_mw:,} MW",
+        )
+
+    with tab1_s1_col2:
+        colf2_1, colf2_2 = st.columns(2)
+        with colf2_1:
+            st.metric(
+                label="North Demand",
+                value=f"{north_MW:,} MW",
+            )
+            st.metric(
+                label="Klang Valley Demand",
+                value=f"{kValley_MW:,} MW",
+            )
+        with colf2_2:
+            st.metric(
+                label="South Demand",
+                value=f"{south_MW:,} MW",
+            )
+            st.metric(
+                label="East Demand",
+                value=f"{east_MW:,} MW",
+            )
+
+    with tab1_s1_col3:
+        data = {
+            'Regional': ["North", "KlangValley", "South", "East"],
+            "Load Demand": [north_MW, kValley_MW, south_MW, east_MW]
+        }
+        df = pd.DataFrame(data)
+        fig = px.pie(
+            df, 
+            values='Load Demand', 
+            names='Regional', 
+            title='Regional Load Demand Profile'
+        )
+        fig.update_traces(
+            hole=.6, 
+            hoverinfo="label+percent+value", 
+            textinfo='percent+label',
+            
+        )
+        fig.update_layout(
+            title=dict(
+                font=dict(size=15, color='White'),
+                y=0.015,
+                x=0.5,
+                xanchor='center',
+                xref='paper',
+            ),
+            showlegend=False, 
+            height=230,  
+            width=250,
+            margin=dict(t=0, b=15, l=3, r=3),
+            annotations=[
+                dict(
+                    text=f"{total_mw:,} MW", 
+                    x=0.5,         
+                    y=0.5,          
+                    font_size=20,  
+                    showarrow=False, 
+                    align="center" 
+                )
+            ]
+        )
+        st.plotly_chart(fig, width="stretch")
+
+    
+    #### List of Load Profile Dataframe  ##############################
     
     show_table = st.checkbox("**Show Load Profile Data**", value=False)
 
     if show_table:
-        load_profile_df = st.session_state["load_profile"] 
-        total_mw = load_profile_df["Pload (MW)"].sum()
-
-        north_MW = load_profile_metric(load_profile_df, "North")
-        kValley_MW = load_profile_metric(load_profile_df, "KlangValley")
-        south_MW = load_profile_metric(load_profile_df, "South")
-        east_MW = load_profile_metric(load_profile_df, "East")
-
         st.subheader("Load Profile Data")
-
         col_lp1, col_lp2 = st.columns(2)
 
         with col_lp1:
@@ -49,31 +123,6 @@ def display_load_profile():
         
         st.dataframe(filtered_df.head(rows_to_display), width="stretch")
 
-        col_f1, col_f2 = st.columns(2)
-        col_f1.metric(
-            f"Maximum Demand (MD)",
-            f"{int(total_mw):,} MW",
-        )
-
-        with col_f2:
-            colf2_1, colf2_2 = st.columns(2)
-            with colf2_1:
-                st.metric(
-                    label="North Demand",
-                    value=f"{int(north_MW):,} MW",
-                )
-                st.metric(
-                    label="Klang Valley Demand",
-                    value=f"{int(kValley_MW):,} MW",
-                )
-            with colf2_2:
-                st.metric(
-                    label="South Demand",
-                    value=f"{int(south_MW):,} MW",
-                )
-                st.metric(
-                    label="East Demand",
-                    value=f"{int(east_MW):,} MW",
-                )
+        
 
         

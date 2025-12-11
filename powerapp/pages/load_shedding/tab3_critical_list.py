@@ -2,8 +2,8 @@ import pandas as pd
 import streamlit as st
 import numpy as np
 import plotly.express as px
-from applications.load_shedding.data_processing.load_profile import df_search_filter
-from applications.load_shedding.data_processing.helper import column_data_list
+from applications.load_shedding.load_profile import df_search_filter
+from applications.load_shedding.helper import column_data_list
 
 
 def critical_list():

@@ -3,8 +3,8 @@ import streamlit as st
 from typing import List, Optional, Sequence, Tuple, Any
 from datetime import date
 from applications.data_processing.read_data import df_search_filter
-from applications.load_shedding.data_processing.helper import columns_list
-from applications.load_shedding.data_processing.load_profile import (
+from applications.load_shedding.helper import columns_list
+from applications.load_shedding.load_profile import (
     load_profile_metric,
 )
 from pages.load_shedding.helper import display_ls_metrics

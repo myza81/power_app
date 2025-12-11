@@ -1,9 +1,9 @@
 import streamlit as st
 from applications.data_processing.read_data import read_raw_data
-from applications.load_shedding.data_processing.LoadShedding import (
+from applications.load_shedding.LoadShedding import (
     LoadShedding,
 )
-from applications.load_shedding.data_processing.load_profile import (
+from applications.load_shedding.load_profile import (
     load_profile_enrichment,
 )
 from pages.load_shedding.tab1_ls_viewer import ls_data_viewer

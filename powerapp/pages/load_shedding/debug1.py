@@ -2,10 +2,10 @@ import pandas as pd
 import streamlit as st
 from typing import List, Optional, Sequence, Tuple, Any
 
-from applications.load_shedding.data_processing.LoadShedding import (
+from powerapp.applications.load_shedding.LoadShedding import (
     LoadShedding,
 )
-from applications.load_shedding.data_processing.LoadShedding import read_ls_data, get_path
+from powerapp.applications.load_shedding.LoadShedding import read_ls_data, get_path
 pd.set_option("display.max_rows", None)
 pd.set_option("display.max_columns", None)
 

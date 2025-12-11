@@ -2,35 +2,9 @@ import pandas as pd
 import streamlit as st
 from typing import List, Optional, Sequence, Any
 
-from applications.load_shedding.data_processing.helper import columns_list
+from applications.load_shedding.helper import (columns_list, column_data_list)
 from applications.data_processing.read_data import df_search_filter
 from pages.load_shedding.helper import display_ls_metrics
-
-
-def column_data_list(
-    df: Optional[pd.DataFrame],
-    column_name: str,
-    unwanted_el: Optional[Sequence[Any]] = None,
-    add_el: Optional[Sequence[dict]] = None,
-) -> List[Any]:
-
-    if df is None or column_name not in df.columns:
-        return []
-
-    values = df[column_name].tolist()
-    unique_ordered = list(dict.fromkeys(values))
-
-    if unwanted_el:
-        unique_ordered = [v for v in unique_ordered if v not in unwanted_el]
-
-    if add_el:
-        for el in add_el:
-            idx = el.get("idx", 0)
-            data = el.get("data")
-            idx = max(0, min(idx, len(unique_ordered)))
-            unique_ordered.insert(idx, data)
-
-    return unique_ordered
 
 
 def ls_data_viewer() -> None:
@@ -65,14 +39,14 @@ def ls_data_viewer() -> None:
 
         with col1_3:
             zone = list(set(zone_mapping.values()))
-            zone_selected = st.multiselect(label="Zone Location", options=zone)
+            zone_selected = st.multiselect(label="Regional Zone", options=zone)
 
         with col2_1:
             subzone = column_data_list(
                 subs_metadata,
                 "gm_subzone",
             )
-            subzone_selected = st.multiselect(label="GM Subzone", options=subzone)
+            subzone_selected = st.multiselect(label="Grid Maintenace Subzone", options=subzone)
 
         with col2_2:
             ls_stage_options = ufls_setting.columns.tolist()
@@ -107,12 +81,16 @@ def ls_data_viewer() -> None:
         filtered_data = loadshedding.filtered_data(filters=filters, df=masterlist_ls)
 
         if not filtered_data.empty:
-            search_query = st.text_input(
+            col3_1, col3_2, col3_3 = st.columns(3)
+
+            with col3_1:
+                search_query = st.text_input(
                     label="Search for a Keyword:",
                     placeholder="Enter your search keyword here...", 
                     key="active_ls_search_box",
                 )
-            filtered_df = df_search_filter(filtered_data, search_query)
+                filtered_df = df_search_filter(filtered_data, search_query)                
+            
             ls_cols = [col for col in filtered_df.columns if any(
                 keyword in col for keyword in LOADSHED_SCHEME)]
             other_cols = ["zone", "gm_subzone", "substation_name", "mnemonic", "kV", "breaker_id", "ls_dp", "assignment_id", "Pload (MW)"]
