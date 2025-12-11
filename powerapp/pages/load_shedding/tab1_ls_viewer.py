@@ -48,14 +48,6 @@ def ls_data_viewer() -> None:
 
     st.subheader("Active Load Sheddding Assignment")
 
-    ########## debugging info ##########
-
-    # st.dataframe(loadshedding.merged_dp_with_flaglist())
-    # st.dataframe(loadshedding.loadshedding_assignments())
-    # st.divider()
-
-    ########## debugging info ##########
-
     show_table = st.checkbox("**Show Active Load Shedding Assignment List**", value=False)
 
     if show_table:

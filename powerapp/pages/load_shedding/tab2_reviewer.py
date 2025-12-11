@@ -21,6 +21,7 @@ def ls_reviewer():
     loadshedding = st.session_state["loadshedding"]
     ufls_assignment = loadshedding.ufls_assignment
     uvls_assignment = loadshedding.uvls_assignment
+    zone_mapping = loadshedding.zone_mapping
 
     ufls_setting = loadshedding.ufls_setting
     uvls_setting = loadshedding.uvls_setting
@@ -123,7 +124,7 @@ def ls_reviewer():
         # df_id_duplicates = available_assignment[available_assignment.duplicated(subset=['local_trip_id', 'mnemonic', 'feeder_id'], keep=False)]
         # st.dataframe(df_id_duplicates)
 
-        avail_qunatum_mw = remove_duplicate["Pload (MW)"].sum()
+        avail_quantum_mw = remove_duplicate["Pload (MW)"].sum()
 
         north_avail_MW = load_profile_metric(remove_duplicate, "North")
         kValley_avail_MW = load_profile_metric(remove_duplicate, "KlangValley")
@@ -135,7 +136,7 @@ def ls_reviewer():
         with tab2_s3_col1:
             st.metric(
                 label=f"Available Potential Quantum: ",
-                value=f"{int(avail_qunatum_mw):,} MW ({int((avail_qunatum_mw/total_mw)*100)}%)",
+                value=f"{int(avail_quantum_mw):,} MW ({int((avail_quantum_mw/total_mw)*100)}%)",
             )
 
         with tab2_s3_col2:
@@ -163,7 +164,37 @@ def ls_reviewer():
         with tab2_s3_col3:
             pass
 
-        st.dataframe(available_assignment)
+        #### filter options
+        col2_s3_col1, col2_s3_col2, col2_s3_col3 = st.columns(3)
+
+        with col2_s3_col1:
+            zone = list(set(zone_mapping.values()))
+            zone_selected = st.multiselect(
+                label="Zone Location", 
+                options=zone, 
+                key="avail_loadshed_zone"
+            )
+        with col2_s3_col2:
+            search_query = st.text_input(
+                label="Search for a Keyword:",
+                placeholder="Enter your search keyword here...",
+                key="avail_loadshed_search_box",
+            )
+
+        filters = {
+            # "review_year": review_year,
+            # "scheme": selected_ls_scheme,
+            # "op_stage": stage_selected,
+            "zone": zone_selected,
+            # "gm_subzone": subzone_selected,
+            # "ls_dp": trip_assignment,
+        }
+
+        filtered_data = loadshedding.filtered_data(
+            filters=filters, df=available_assignment
+        )
+
+        st.dataframe(filtered_data)
 
     st.divider()
 

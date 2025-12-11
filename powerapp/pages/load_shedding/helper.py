@@ -18,7 +18,7 @@ def display_ls_metrics(scheme, df, load_profile):
     if total_MD == 0:
         pct_scheme_ls = 0
     else:
-        pct_scheme_ls = int((total_scheme_ls / total_MD) * 100)
+        pct_scheme_ls = (total_scheme_ls / total_MD) * 100
 
     zones = ["North", "KlangValley", "South", "East"]
     zone_data = {
