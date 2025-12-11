@@ -133,11 +133,9 @@ def ls_data_viewer() -> None:
 
             SCHEME_COLUMNS = ls_cols
             for scheme in SCHEME_COLUMNS:
-                if scheme in filtered_data.columns:
+                if scheme in filtered_df.columns:
                     display_ls_metrics(
-                        scheme=scheme, 
-                        df=filtered_data, 
-                        load_profile = load_profile_df
-                    )               
+                        scheme=scheme, df=filtered_df, load_profile=load_profile_df
+                    )
         else:
             st.info("No active load shedding assignment found for the selected filters.")
