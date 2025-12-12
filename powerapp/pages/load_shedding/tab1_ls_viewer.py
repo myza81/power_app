@@ -1,5 +1,7 @@
 import pandas as pd
 import streamlit as st
+import time
+from datetime import date
 from typing import List, Optional, Sequence, Any
 
 from applications.load_shedding.helper import (
@@ -8,11 +10,12 @@ from applications.load_shedding.helper import (
     scheme_col_sorted,
 )
 from applications.data_processing.read_data import df_search_filter
-from pages.load_shedding.helper import display_ls_metrics
+from applications.data_processing.save_to import export_to_excel
+from pages.load_shedding.helper import display_ls_metrics, show_temporary_message
 
 
 def ls_data_viewer() -> None:
-    load_profile_df = st.session_state["load_profile"] 
+    load_profile_df = st.session_state["load_profile"]
     loadshedding = st.session_state["loadshedding"]
 
     ufls_assignment = loadshedding.ufls_assignment
@@ -27,19 +30,24 @@ def ls_data_viewer() -> None:
 
     st.subheader("Active Load Sheddding Assignment")
 
-    show_table = st.checkbox("**Show Active Load Shedding Assignment List**", value=False)
+    show_table = st.checkbox(
+        "**Show Active Load Shedding Assignment List**", value=False)
 
     if show_table:
         col1_1, col1_2, col1_3 = st.columns(3)
         col2_1, col2_2, col2_3 = st.columns(3)
+        col3_1, col3_2, col3_3 = st.columns(3)
 
         with col1_1:
-            review_year_list = columns_list(ufls_assignment, unwanted_el=["assignment_id"])
+            review_year_list = columns_list(
+                ufls_assignment, unwanted_el=["assignment_id"])
             review_year_list.sort(reverse=True)
-            review_year = st.selectbox(label="Review Year", options=review_year_list)
+            review_year = st.selectbox(
+                label="Review Year", options=review_year_list)
 
         with col1_2:
-            ls_scheme = st.multiselect(label="Scheme", options=LOADSHED_SCHEME, default="UFLS")
+            ls_scheme = st.multiselect(
+                label="Scheme", options=LOADSHED_SCHEME, default="UFLS")
             selected_ls_scheme = LOADSHED_SCHEME if ls_scheme == [] else ls_scheme
 
         with col1_3:
@@ -51,7 +59,8 @@ def ls_data_viewer() -> None:
                 subs_metadata,
                 "gm_subzone",
             )
-            subzone_selected = st.multiselect(label="Grid Maintenace Subzone", options=subzone)
+            subzone_selected = st.multiselect(
+                label="Grid Maintenace Subzone", options=subzone)
 
         with col2_2:
             ls_stage_options = ufls_setting.columns.tolist()
@@ -69,7 +78,7 @@ def ls_data_viewer() -> None:
                 options=ls_dp,
             )
 
-        filters ={
+        filters = {
             "review_year": review_year,
             "scheme": selected_ls_scheme,
             "op_stage": stage_selected,
@@ -83,10 +92,10 @@ def ls_data_viewer() -> None:
             return
 
         masterlist_ls = loadshedding.ls_assignment_masterlist()
-        filtered_data = loadshedding.filtered_data(filters=filters, df=masterlist_ls)
+        filtered_data = loadshedding.filtered_data(
+            filters=filters, df=masterlist_ls)
 
         if not filtered_data.empty:
-            col3_1, col3_2, col3_3 = st.columns(3)
 
             selected_inp_scheme = [
                 f"{scheme}_{review_year}" for scheme in selected_ls_scheme
@@ -102,18 +111,16 @@ def ls_data_viewer() -> None:
             with col3_1:
                 search_query = st.text_input(
                     label="Search for a Keyword:",
-                    placeholder="Enter your search keyword here...", 
+                    placeholder="Enter your search keyword here...",
                     key="active_ls_search_box",
                 )
-                filtered_df = df_search_filter(filtered_data, search_query)                
+                filtered_df = df_search_filter(filtered_data, search_query)
 
             ls_cols = [col for col in filtered_df.columns if any(
                 keyword in col for keyword in LOADSHED_SCHEME)]
-            other_cols = ["zone", "gm_subzone", "substation_name", "mnemonic", "kV", "breaker_id", "ls_dp", "assignment_id", "Pload (MW)"]
-            insertion_point = other_cols.index("kV") + 1
-            col_seq = other_cols[:insertion_point] + ls_cols + other_cols[insertion_point:]
 
-            ## add with hv relay loc
+            # add with hv relay loc
+            hvcb_rly['kV'] = hvcb_rly['kV'].astype(str)
             hvcb_rly = hvcb_rly.rename(
                 columns={
                     "breaker_id": "Breaker(s)",
@@ -134,25 +141,116 @@ def ls_data_viewer() -> None:
             merge_rly_loc["Mnemonic"] = merge_rly_loc["Mnemonic"].fillna(
                 merge_rly_loc["mnemonic"]
             )
-            merge_rly_loc["Voltage Level"] = merge_rly_loc["Voltage Level"].astype(str)
+
             merge_rly_loc["Voltage Level"] = merge_rly_loc["Voltage Level"].fillna(
                 merge_rly_loc["kV"]
             )
 
-            st.dataframe(merge_rly_loc)
+            merge_rly_loc["Breaker(s)"] = merge_rly_loc["Breaker(s)"].fillna(
+                merge_rly_loc["breaker_id"]
+            )
+            merge_rly_loc["Feeder Assignmnet"] = merge_rly_loc["Feeder Assignmnet"].fillna(
+                merge_rly_loc["feeder_id"]
+            )
 
-            sorted_df = scheme_col_sorted(filtered_df, available_scheme_set)
+            column_order = ls_cols + [
+                "Mnemonic",
+                "Voltage Level",
+                "Breaker(s)",
+                "Feeder Assignmnet",
+                "assignment_id",
+                "ls_dp"
+            ]
+
+            merge_rly_loc = merge_rly_loc[column_order]
+
+            merge_rly_meta = pd.merge(
+                merge_rly_loc,
+                subs_metadata,
+                left_on="Mnemonic",
+                right_on="mnemonic",
+                how="left"
+            )[merge_rly_loc.columns.tolist() + ["zone", "gm_subzone", "substation_name"]]
+
+            grp_df = merge_rly_meta.groupby(
+                ls_cols + ["substation_name", "Mnemonic", "Voltage Level", "assignment_id", "ls_dp"], as_index=False, dropna=False
+            ).agg(
+                {
+                    "zone": lambda x: ", ".join(x.astype(str).unique()),
+                    "gm_subzone": lambda x: ", ".join(x.astype(str).unique()),
+                    "Breaker(s)": lambda x: ", ".join(x.astype(str).unique()),
+                    "Feeder Assignmnet": lambda x: ", ".join(x.astype(str).unique()),
+                }
+            )
+
+            grp_df = grp_df.rename(columns={
+                "zone": "Regional Zone",
+                "gm_subzone": "Grid Maint. Subzone",
+                "substation_name": "Substation",
+                "ls_dp": "Type"
+            })
+
+            sorted_df = scheme_col_sorted(grp_df, available_scheme_set, [
+                                          "assignment_id", "Regional Zone", "Grid Maint. Subzone"])
+
+            columns_order = ls_cols + [
+                "Regional Zone",
+                "Grid Maint. Subzone",
+                "Substation",
+                "Mnemonic",
+                "Voltage Level",
+                "Breaker(s)",
+                "Feeder Assignmnet",
+                "Type",
+                "assignment_id",
+            ]
+
+            df_final_display = sorted_df.reindex(columns=columns_order)
 
             st.dataframe(
-                sorted_df, column_order=col_seq, width="stretch", hide_index=True
+                df_final_display, width="stretch", hide_index=True
             )
+
+            col4_1, col4_2, col4_3 = st.columns([2, 1, 4])
+
+            with col4_1:
+                ls_name = [ls for ls in available_scheme_set]
+                combine_ls_name = "_".join(ls_name)
+                today = date.today()
+                default_filename = f"{combine_ls_name}_downloadOn_{today.strftime("%d%m%Y")}"
+
+                filename = st.text_input(
+                    label="Enter filename: ",
+                    value=default_filename,
+                    key="export_filename",
+                )
+
+            with col4_2:
+                st.markdown("<br>", unsafe_allow_html=True)
+                excel_data = export_to_excel(df_final_display)
+                export_btn = st.download_button(
+                    label="Export to Excel File",
+                    data=excel_data,
+                    file_name=f"{filename}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="export_button"
+                )
+
+            if export_btn:
+                show_temporary_message(
+                    message_type='info',
+                    message=f"File will be saved as **{filename}** to your browser's downloads folder.",
+                    duration=3
+                )
 
             SCHEME_COLUMNS = ls_cols
             for scheme in SCHEME_COLUMNS:
                 if scheme in filtered_df.columns:
+                    st.divider()
                     display_ls_metrics(
                         scheme=scheme, df=filtered_df, load_profile=load_profile_df
                     )
+
 
             if missing_scheme:
                 for scheme in missing_scheme:
@@ -160,4 +258,26 @@ def ls_data_viewer() -> None:
                         f"No active load shedding {scheme} assignment found for the selected filters."
                     )
         else:
-            st.info("No active load shedding assignment found for the selected filters.")
+            st.info(
+                "No active load shedding assignment found for the selected filters.")
+    
+    st.divider()
+    #################################################################################
+    #### Section 2 - Active Dashboard Data  ######################
+    #################################################################################
+    
+    st.subheader("Load Sheddding Assignment Dashboard")
+
+    tab1_s2_col1, tab1_s2_col2, tab1_s2_col3 = st.columns(3)
+
+    with tab1_s2_col1:
+        review_year_list = columns_list(ufls_assignment, unwanted_el=["assignment_id"])
+        review_year_list.sort(reverse=True)
+        review_year = st.selectbox(
+            label="Review Year", options=review_year_list, key="dashboard_review_year")
+
+    with tab1_s2_col2:
+        ls_scheme = st.multiselect(
+            label="Scheme", options=LOADSHED_SCHEME, default="UFLS", key="dashboard_ls_scheme")
+        selected_ls_scheme = LOADSHED_SCHEME if ls_scheme == [] else ls_scheme
+

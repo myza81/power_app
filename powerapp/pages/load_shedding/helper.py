@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 import pandas as pd
 from typing import List, Optional, Sequence, Any
@@ -51,7 +52,6 @@ def display_ls_metrics(scheme, df, load_profile):
             zone_metric(col3_2b, "South", zone_data, zone_MD)
             zone_metric(col3_2b, "East", zone_data, zone_MD)
 
-    st.divider()
 
 def zone_metric(col, zone_name, zone_data, zone_MD):
     ls = int(zone_data[zone_name])
@@ -70,3 +70,16 @@ def zone_metric(col, zone_name, zone_data, zone_MD):
 
 
 
+def show_temporary_message(message_type, message, duration=3):
+    placeholder = st.empty()
+
+    if message_type == 'info':
+        placeholder.info(message)
+    elif message_type == 'success':
+        placeholder.success(message)
+    elif message_type == 'warning':
+        placeholder.warning(message)
+
+    time.sleep(duration)
+
+    placeholder.empty()

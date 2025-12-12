@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import List, Optional, Sequence, Tuple, Any
+from typing import List, Optional, Sequence, Tuple, Any, Union, Set
 
 
 def columns_list(
@@ -50,20 +50,77 @@ def column_data_list(
     return unique_ordered
 
 
-def scheme_col_sorted(df, ls_column):
+# def scheme_col_sorted(df, ls_column, sort_seqcol: Optional[list] = None):
+#     col_scheme = ls_column
+#     if isinstance(ls_column, set):
+#         length_scheme = {}
+#         for col in ls_column:
+#             length_scheme[col] = len(df[df[col].notna()])
+#         col_scheme = max(length_scheme, key=lambda k: length_scheme[k])
+
+#     df_filtered = df[df[col_scheme].notna()].copy()
+#     df_filtered["seq_order"] = (
+#         df_filtered[col_scheme].str.split("_", expand=True).iloc[:, 1].astype(int)
+#     )
+
+#     df_sorted = df_filtered.sort_values(by="seq_order")
+#     if sort_seqcol:
+#         sorted_cols = ["seq_order"]+sort_seqcol
+#         sorted_bool = [True for col in sorted_cols]
+#         df_sorted = df_filtered.sort_values(
+#             by=sorted_cols,
+#             ascending=sorted_bool
+#         )
+
+#     df_sorted = df_sorted.drop(columns=["seq_order"], axis=1)
+
+#     return df_sorted
+
+
+def scheme_col_sorted(df: pd.DataFrame, ls_column: Union[str, Set[str]], sort_seqcol: Optional[list] = None) -> pd.DataFrame:
     col_scheme = ls_column
+
+    # 1. Determine the primary column if a set is provided (original logic kept)
     if isinstance(ls_column, set):
-        length_scheme = {}
-        for col in ls_column:
-            length_scheme[col] = len(df[df[col].notna()])
+        length_scheme = {col: len(df[df[col].notna()]) for col in ls_column}
         col_scheme = max(length_scheme, key=lambda k: length_scheme[k])
-
+    
+    # 2. Filter and create the sequence column
     df_filtered = df[df[col_scheme].notna()].copy()
-    df_filtered["seq_order"] = (
-        df_filtered[col_scheme].str.split("_", expand=True).iloc[:, 1].astype(int)
+
+    # Assuming the sequence is always the 2nd part after splitting by "_" (e.g., "A_10_X" -> 10)
+    try:
+        df_filtered["seq_order"] = (
+            df_filtered[col_scheme].str.split("_", expand=True).iloc[:, 1].astype(int)
+        )
+    except Exception as e:
+        # Handle cases where the split might not result in 2 parts or conversion fails
+        print(f"Error creating seq_order column: {e}")
+        return df_filtered.sort_values(by=col_scheme) # Fallback sort
+        
+
+    # 3. Define the sorting hierarchy
+    
+    # Primary sort column is always 'seq_order'
+    sorted_cols = ["seq_order"] 
+    
+    # Primary sort direction is always Ascending (True)
+    sorted_bool = [True] 
+    
+    if sort_seqcol:
+        # Add secondary sort columns and their ascending direction (True by default)
+        sorted_cols.extend(sort_seqcol)
+        sorted_bool.extend([True] * len(sort_seqcol)) # Assumes all secondary sorts are Ascending
+        
+    
+    # 4. Perform the single, correct sort operation
+    # This ensures seq_order is the highest priority, followed by any secondary columns
+    df_sorted = df_filtered.sort_values(
+        by=sorted_cols,
+        ascending=sorted_bool
     )
+        
+    # 5. Clean up and return
+    df_sorted = df_sorted.drop(columns=["seq_order"])
 
-    sorted_overlap = df_filtered.sort_values(by="seq_order")
-    sorted_overlap = sorted_overlap.drop(columns=["seq_order"], axis=1)
-
-    return sorted_overlap
+    return df_sorted
