@@ -65,32 +65,31 @@ def display_load_profile():
         )
         fig.update_layout(
             title=dict(
-                font=dict(size=15, color='White'),
+                font=dict(size=15, color="#2E86C1"),
                 y=0.015,
                 x=0.5,
-                xanchor='center',
-                xref='paper',
+                xanchor="center",
+                xref="paper",
             ),
-            showlegend=False, 
-            height=230,  
+            showlegend=False,
+            height=230,
             width=250,
-            margin=dict(t=0, b=15, l=3, r=3),
+            margin=dict(t=0, b=25, l=3, r=3),
             annotations=[
                 dict(
-                    text=f"{total_mw:,} MW", 
-                    x=0.5,         
-                    y=0.5,          
-                    font_size=20,  
-                    showarrow=False, 
-                    align="center" 
+                    text=f"{total_mw:,} MW",
+                    x=0.5,
+                    y=0.5,
+                    font_size=20,
+                    showarrow=False,
+                    align="center",
                 )
-            ]
+            ],
         )
         st.plotly_chart(fig, width="stretch")
 
-    
     #### List of Load Profile Dataframe  ##############################
-    
+
     show_table = st.checkbox("**Show Load Profile Data**", value=False)
 
     if show_table:
@@ -120,9 +119,5 @@ def display_load_profile():
                     step=1,
                     help=f"Currently filtering from {len(load_profile_df)} total rows. {max_rows} rows match the search query.",
                 )
-        
+
         st.dataframe(filtered_df.head(rows_to_display), width="stretch")
-
-        
-
-        
