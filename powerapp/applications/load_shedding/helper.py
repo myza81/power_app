@@ -48,3 +48,22 @@ def column_data_list(
             unique_ordered.insert(idx, data)
 
     return unique_ordered
+
+
+def scheme_col_sorted(df, ls_column):
+    col_scheme = ls_column
+    if isinstance(ls_column, set):
+        length_scheme = {}
+        for col in ls_column:
+            length_scheme[col] = len(df[df[col].notna()])
+        col_scheme = max(length_scheme, key=lambda k: length_scheme[k])
+
+    df_filtered = df[df[col_scheme].notna()].copy()
+    df_filtered["seq_order"] = (
+        df_filtered[col_scheme].str.split("_", expand=True).iloc[:, 1].astype(int)
+    )
+
+    sorted_overlap = df_filtered.sort_values(by="seq_order")
+    sorted_overlap = sorted_overlap.drop(columns=["seq_order"], axis=1)
+
+    return sorted_overlap

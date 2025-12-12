@@ -3,7 +3,7 @@ import streamlit as st
 import numpy as np
 import plotly.express as px
 from applications.load_shedding.load_profile import df_search_filter
-from applications.load_shedding.helper import column_data_list
+from applications.load_shedding.helper import (column_data_list, scheme_col_sorted)
 
 
 def critical_list():
@@ -33,7 +33,7 @@ def critical_list():
         with col1:
             zone = sorted(set(zone_mapping.values()))
             zone_selected = st.multiselect(
-                label="Zone Location",
+                label="Regional Zone",
                 options=zone,
                 key="flaglist_zone",
             )
@@ -99,7 +99,6 @@ def critical_list():
             )
 
             if not filtered_data.empty:
-
                 filtered_df = df_search_filter(filtered_data, search_query)
                 st.dataframe(
                     filtered_df,
@@ -176,7 +175,7 @@ def critical_list():
         with col4:
             zone = sorted(set(zone_mapping.values()))
             zone_selected = st.multiselect(
-                label="Zone Location",
+                label="Regional Zone",
                 options=zone,
                 key="overlap_flaglist_zone",
             )
@@ -216,6 +215,16 @@ def critical_list():
         filtered_data = loadshedding.filtered_data(filters=filters, df=overlap_list)
 
         if not filtered_data.empty:
+            selected_inp_scheme = [
+                f"{scheme}_{review_year}" for scheme in selected_ls_scheme
+            ]
+
+            missing_scheme = set(selected_inp_scheme).difference(
+                set(filtered_data.columns)
+            )
+            available_scheme_set = set(selected_inp_scheme).intersection(
+                set(filtered_data.columns)
+            )
 
             filtered_df = df_search_filter(filtered_data, search_query)
 
@@ -227,9 +236,16 @@ def critical_list():
             other_cols = ["mnemonic", "kV", "assignment_id", "short_text"]
             col_seq = ls_cols + other_cols
 
+            sorted_df = scheme_col_sorted(filtered_df, available_scheme_set)
             st.dataframe(
-                filtered_df, column_order=col_seq, width="stretch", hide_index=True
+                sorted_df, column_order=col_seq, width="stretch", hide_index=True
             )
+
+            if missing_scheme:
+                for scheme in missing_scheme:
+                    st.info(
+                        f"No active load shedding {scheme} assignment found for the selected filters."
+                    )
 
         else:
             st.info(
@@ -262,6 +278,9 @@ def critical_list():
             ]
 
             for ls_review in valid_ls_cols:
+
+                tab3_s3_col1, tab3_s3_col2 = st.columns([1,3])
+
                 df_list = masterlist_ls[
                     [ls_review, "critical_list", "assignment_id", "Pload (MW)"]
                 ].copy()
@@ -274,7 +293,10 @@ def critical_list():
                     .groupby([ls_review])
                     .agg({"Pload (MW)": "sum"})
                 )
-                quantum_ls_stg.rename(columns={"Pload (MW)": "Total MW"}, inplace=True)
+
+                quantum_ls_stg.rename(
+                    columns={"Pload (MW)": "Load Shed Quantum MW"}, inplace=True
+                )
 
                 quantum_critical_list = filtered_df.groupby(["assignment_id"]).agg(
                     {
@@ -292,14 +314,22 @@ def critical_list():
                     .groupby([ls_review])
                     .agg({"Pload (MW)": "sum"})
                 )
+
                 quantum_critical_stg.rename(
                     columns={"Pload (MW)": "Critical List MW"}, inplace=True
                 )
 
                 summary_overlap = pd.merge(
                     quantum_ls_stg, quantum_critical_stg, on=ls_review, how="left"
-                )
+                ).reset_index()
 
-                st.dataframe(summary_overlap)
+                sorted_df = scheme_col_sorted(summary_overlap, ls_review)
+
+                with tab3_s3_col1:
+                    st.dataframe(sorted_df, hide_index=True)
+
+                with tab3_s3_col1:
+                    pass
+
         else:
             st.info("No load shedding assignment found for the selected filters.")

@@ -2,7 +2,11 @@ import pandas as pd
 import streamlit as st
 from typing import List, Optional, Sequence, Any
 
-from applications.load_shedding.helper import (columns_list, column_data_list)
+from applications.load_shedding.helper import (
+    columns_list,
+    column_data_list,
+    scheme_col_sorted,
+)
 from applications.data_processing.read_data import df_search_filter
 from pages.load_shedding.helper import display_ls_metrics
 
@@ -17,6 +21,7 @@ def ls_data_viewer() -> None:
     subs_metadata = loadshedding.subs_metadata_enrichment()
     zone_mapping = loadshedding.zone_mapping
     loadshedding_dp = loadshedding.merged_dp()
+    hvcb_rly = loadshedding.hvcb_rly_loc
 
     LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
 
@@ -83,6 +88,17 @@ def ls_data_viewer() -> None:
         if not filtered_data.empty:
             col3_1, col3_2, col3_3 = st.columns(3)
 
+            selected_inp_scheme = [
+                f"{scheme}_{review_year}" for scheme in selected_ls_scheme
+            ]
+
+            missing_scheme = set(selected_inp_scheme).difference(
+                set(filtered_data.columns)
+            )
+            available_scheme_set = set(selected_inp_scheme).intersection(
+                set(filtered_data.columns)
+            )
+
             with col3_1:
                 search_query = st.text_input(
                     label="Search for a Keyword:",
@@ -90,15 +106,45 @@ def ls_data_viewer() -> None:
                     key="active_ls_search_box",
                 )
                 filtered_df = df_search_filter(filtered_data, search_query)                
-            
+
             ls_cols = [col for col in filtered_df.columns if any(
                 keyword in col for keyword in LOADSHED_SCHEME)]
             other_cols = ["zone", "gm_subzone", "substation_name", "mnemonic", "kV", "breaker_id", "ls_dp", "assignment_id", "Pload (MW)"]
             insertion_point = other_cols.index("kV") + 1
             col_seq = other_cols[:insertion_point] + ls_cols + other_cols[insertion_point:]
 
+            ## add with hv relay loc
+            hvcb_rly = hvcb_rly.rename(
+                columns={
+                    "breaker_id": "Breaker(s)",
+                    "feeder_id": "Feeder Assignmnet",
+                    "mnemonic": "Mnemonic",
+                    'kV': 'Voltage Level'
+                }
+            )
+
+            merge_rly_loc = pd.merge(
+                filtered_df,
+                hvcb_rly,
+                left_on="group_trip_id",
+                right_on="group_trip_id",
+                how="left",
+            )
+
+            merge_rly_loc["Mnemonic"] = merge_rly_loc["Mnemonic"].fillna(
+                merge_rly_loc["mnemonic"]
+            )
+            merge_rly_loc["Voltage Level"] = merge_rly_loc["Voltage Level"].astype(str)
+            merge_rly_loc["Voltage Level"] = merge_rly_loc["Voltage Level"].fillna(
+                merge_rly_loc["kV"]
+            )
+
+            st.dataframe(merge_rly_loc)
+
+            sorted_df = scheme_col_sorted(filtered_df, available_scheme_set)
+
             st.dataframe(
-                filtered_df, column_order=col_seq, width="stretch", hide_index=True
+                sorted_df, column_order=col_seq, width="stretch", hide_index=True
             )
 
             SCHEME_COLUMNS = ls_cols
@@ -106,6 +152,12 @@ def ls_data_viewer() -> None:
                 if scheme in filtered_df.columns:
                     display_ls_metrics(
                         scheme=scheme, df=filtered_df, load_profile=load_profile_df
+                    )
+
+            if missing_scheme:
+                for scheme in missing_scheme:
+                    st.info(
+                        f"No active load shedding {scheme} assignment found for the selected filters."
                     )
         else:
             st.info("No active load shedding assignment found for the selected filters.")
