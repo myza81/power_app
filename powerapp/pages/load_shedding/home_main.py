@@ -8,8 +8,11 @@ from applications.load_shedding.load_profile import (
 )
 from pages.load_shedding.tab1_ls_viewer import ls_data_viewer
 from pages.load_shedding.tab1_load_profile import display_load_profile
+from pages.load_shedding.tab1_dashboard import ls_assignment_dashboard
 from pages.load_shedding.tab2_reviewer import ls_reviewer
 from pages.load_shedding.tab3_critical_list import critical_list
+from pages.load_shedding.tab3_overlap_ls import overlap_ls
+from pages.load_shedding.tab3_dashboard import critical_list_dashboard
 
 
 st.set_page_config(layout="wide", page_title="UFLS")
@@ -46,12 +49,16 @@ if load_profile_df is not None:
         display_load_profile()
         st.divider()
         ls_data_viewer()
+        st.divider()
+        ls_assignment_dashboard()
     with tab2:
         ls_reviewer()
         st.divider()
     with tab3:
         critical_list()
         st.divider()
+        overlap_ls()
+        
     with tab4:
         st.subheader("Debugging Info")
         loadshedding = st.session_state["loadshedding"]

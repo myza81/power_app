@@ -25,8 +25,8 @@ def ls_data_viewer() -> None:
     zone_mapping = loadshedding.zone_mapping
     loadshedding_dp = loadshedding.merged_dp()
     hvcb_rly = loadshedding.hvcb_rly_loc
-
-    LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
+    masterlist_ls = loadshedding.ls_assignment_masterlist()
+    LS_SCHEME = loadshedding.LOADSHED_SCHEME
 
     st.subheader("Active Load Sheddding Assignment")
 
@@ -47,8 +47,8 @@ def ls_data_viewer() -> None:
 
         with col1_2:
             ls_scheme = st.multiselect(
-                label="Scheme", options=LOADSHED_SCHEME, default="UFLS")
-            selected_ls_scheme = LOADSHED_SCHEME if ls_scheme == [] else ls_scheme
+                label="Scheme", options=LS_SCHEME, default="UFLS")
+            selected_ls_scheme = LS_SCHEME if ls_scheme == [] else ls_scheme
 
         with col1_3:
             zone = list(set(zone_mapping.values()))
@@ -91,7 +91,6 @@ def ls_data_viewer() -> None:
             st.info("Please upload or set a load profile first.")
             return
 
-        masterlist_ls = loadshedding.ls_assignment_masterlist()
         filtered_data = loadshedding.filtered_data(
             filters=filters, df=masterlist_ls)
 
@@ -117,7 +116,7 @@ def ls_data_viewer() -> None:
                 filtered_df = df_search_filter(filtered_data, search_query)
 
             ls_cols = [col for col in filtered_df.columns if any(
-                keyword in col for keyword in LOADSHED_SCHEME)]
+                keyword in col for keyword in LS_SCHEME)]
 
             # add with hv relay loc
             hvcb_rly['kV'] = hvcb_rly['kV'].astype(str)
@@ -243,14 +242,12 @@ def ls_data_viewer() -> None:
                     duration=3
                 )
 
-            SCHEME_COLUMNS = ls_cols
-            for scheme in SCHEME_COLUMNS:
+            for scheme in ls_cols:
                 if scheme in filtered_df.columns:
                     st.divider()
                     display_ls_metrics(
                         scheme=scheme, df=filtered_df, load_profile=load_profile_df
                     )
-
 
             if missing_scheme:
                 for scheme in missing_scheme:
@@ -260,24 +257,3 @@ def ls_data_viewer() -> None:
         else:
             st.info(
                 "No active load shedding assignment found for the selected filters.")
-    
-    st.divider()
-    #################################################################################
-    #### Section 2 - Active Dashboard Data  ######################
-    #################################################################################
-    
-    st.subheader("Load Sheddding Assignment Dashboard")
-
-    tab1_s2_col1, tab1_s2_col2, tab1_s2_col3 = st.columns(3)
-
-    with tab1_s2_col1:
-        review_year_list = columns_list(ufls_assignment, unwanted_el=["assignment_id"])
-        review_year_list.sort(reverse=True)
-        review_year = st.selectbox(
-            label="Review Year", options=review_year_list, key="dashboard_review_year")
-
-    with tab1_s2_col2:
-        ls_scheme = st.multiselect(
-            label="Scheme", options=LOADSHED_SCHEME, default="UFLS", key="dashboard_ls_scheme")
-        selected_ls_scheme = LOADSHED_SCHEME if ls_scheme == [] else ls_scheme
-

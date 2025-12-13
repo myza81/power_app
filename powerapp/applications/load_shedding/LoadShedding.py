@@ -130,6 +130,7 @@ class LoadShedding:
             "East-Dungun": "East",
             "East-Kuantan": "East",
         }
+        self.LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
 
     def subs_metadata_enrichment(self):
         if self.subs_meta is None:
