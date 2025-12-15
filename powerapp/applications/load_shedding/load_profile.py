@@ -1,24 +1,24 @@
 import pandas as pd
 
 
-def load_profile_enrichment(df):
-    state_name = {"LANGKAWI": "KEDAH", "WPKL": "KL", "TGANU": "TERENGGANU"}
-    state = {
-        "North": ["Kedah", "Perlis", "P Pinang", "Perak"],
-        "KlangValley": ["KL", "Selangor"],
-        "South": ["NS", "Johor", "Melaka"],
-        "East": ["Kelantan", "Terengganu", "Pahang"],
-    }
-    df["Zone Name"] = df["Zone Name"].replace(state_name)
-    df["Id"] = df["Id"].astype(str)
+# def load_profile_enrichment(df):
+#     state_name = {"LANGKAWI": "KEDAH", "WPKL": "KL", "TGANU": "TERENGGANU"}
+#     state = {
+#         "North": ["Kedah", "Perlis", "P Pinang", "Perak"],
+#         "KlangValley": ["KL", "Selangor"],
+#         "South": ["NS", "Johor", "Melaka"],
+#         "East": ["Kelantan", "Terengganu", "Pahang"],
+#     }
+#     df["Zone Name"] = df["Zone Name"].replace(state_name)
+#     df["Id"] = df["Id"].astype(str)
 
-    zone_state = {}
-    for zone, states in state.items():
-        for state in states:
-            zone_state[state.upper()] = zone
-    df["zone"] = df["Zone Name"].str.upper().map(zone_state)
+#     zone_state = {}
+#     for zone, states in state.items():
+#         for state in states:
+#             zone_state[state.upper()] = zone
+#     df["zone"] = df["Zone Name"].str.upper().map(zone_state)
 
-    return df
+#     return df
 
 
 def load_profile_metric(df, zone, scheme=None):

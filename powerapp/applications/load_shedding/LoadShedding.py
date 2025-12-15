@@ -75,8 +75,8 @@ def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
 
 
 class LoadShedding:
-    def __init__(self, load_profile: pd.DataFrame, data_dir: str = "data") -> None:
-        self.load_profile = load_profile.copy()
+    def __init__(self, load_df: pd.DataFrame, data_dir: str = "data") -> None:
+        self.load_profile = load_df
 
         self.ufls_assignment = read_ls_data(
             get_path("assignment_ufls.xlsx", data_dir))

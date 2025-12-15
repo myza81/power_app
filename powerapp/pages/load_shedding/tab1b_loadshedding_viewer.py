@@ -15,9 +15,8 @@ from pages.load_shedding.helper import display_ls_metrics, show_temporary_messag
 
 
 def ls_data_viewer() -> None:
-    load_profile_df = st.session_state["load_profile"]
+    loadprofile = st.session_state["loadprofile"]
     loadshedding = st.session_state["loadshedding"]
-
     ufls_assignment = loadshedding.ufls_assignment
     ufls_setting = loadshedding.ufls_setting
     uvls_setting = loadshedding.uvls_setting
@@ -28,33 +27,33 @@ def ls_data_viewer() -> None:
     masterlist_ls = loadshedding.ls_assignment_masterlist()
     LS_SCHEME = loadshedding.LOADSHED_SCHEME
 
-    st.subheader("Active Load Sheddding Assignment")
+    st.subheader("Load Sheddding Assignment")
 
     show_table = st.checkbox(
-        "**Show Active Load Shedding Assignment List**", value=False)
+        "**Show Load Shedding Assignment List**", value=False)
 
     if show_table:
-        col1_1, col1_2, col1_3 = st.columns(3)
-        col2_1, col2_2, col2_3 = st.columns(3)
-        col3_1, col3_2, col3_3 = st.columns(3)
+        col1, col2, col3 = st.columns(3)
+        col4, col5, col6 = st.columns(3)
+        col7, col8, col9 = st.columns(3)
 
-        with col1_1:
+        with col1:
             review_year_list = columns_list(
                 ufls_assignment, unwanted_el=["assignment_id"])
             review_year_list.sort(reverse=True)
             review_year = st.selectbox(
                 label="Review Year", options=review_year_list)
 
-        with col1_2:
+        with col2:
             ls_scheme = st.multiselect(
                 label="Scheme", options=LS_SCHEME, default="UFLS")
             selected_ls_scheme = LS_SCHEME if ls_scheme == [] else ls_scheme
 
-        with col1_3:
+        with col3:
             zone = list(set(zone_mapping.values()))
             zone_selected = st.multiselect(label="Regional Zone", options=zone)
 
-        with col2_1:
+        with col4:
             subzone = column_data_list(
                 subs_metadata,
                 "gm_subzone",
@@ -62,7 +61,7 @@ def ls_data_viewer() -> None:
             subzone_selected = st.multiselect(
                 label="Grid Maintenace Subzone", options=subzone)
 
-        with col2_2:
+        with col5:
             ls_stage_options = ufls_setting.columns.tolist()
             if len(selected_ls_scheme) == 1 and selected_ls_scheme[0] == "UVLS":
                 ls_stage_options = uvls_setting.columns.tolist()
@@ -71,7 +70,7 @@ def ls_data_viewer() -> None:
                 label="Operating Stage", options=ls_stage_options
             )
 
-        with col2_3:
+        with col6:
             ls_dp = list(set(loadshedding_dp["ls_dp"]))
             trip_assignment = st.multiselect(
                 label="Tripping Assignment",
@@ -86,10 +85,6 @@ def ls_data_viewer() -> None:
             "gm_subzone": subzone_selected,
             "ls_dp": trip_assignment,
         }
-
-        if "load_profile" not in st.session_state:
-            st.info("Please upload or set a load profile first.")
-            return
 
         filtered_data = loadshedding.filtered_data(
             filters=filters, df=masterlist_ls)
@@ -107,7 +102,7 @@ def ls_data_viewer() -> None:
                 set(filtered_data.columns)
             )
 
-            with col3_1:
+            with col7:
                 search_query = st.text_input(
                     label="Search for a Keyword:",
                     placeholder="Enter your search keyword here...",
@@ -210,9 +205,9 @@ def ls_data_viewer() -> None:
                 df_final_display, width="stretch", hide_index=True
             )
 
-            col4_1, col4_2, col4_3 = st.columns([2, 1, 4])
+            col10, col11, col12, col13 = st.columns([1.8, 1.2, 0.1, 5])
 
-            with col4_1:
+            with col10:
                 ls_name = [ls for ls in available_scheme_set]
                 combine_ls_name = "_".join(ls_name)
                 today = date.today()
@@ -224,7 +219,7 @@ def ls_data_viewer() -> None:
                     key="export_filename",
                 )
 
-            with col4_2:
+            with col11:
                 st.markdown("<br>", unsafe_allow_html=True)
                 excel_data = export_to_excel(df_final_display)
                 export_btn = st.download_button(
@@ -241,13 +236,6 @@ def ls_data_viewer() -> None:
                     message=f"File will be saved as **{filename}** to your browser's downloads folder.",
                     duration=3
                 )
-
-            for scheme in ls_cols:
-                if scheme in filtered_df.columns:
-                    st.divider()
-                    display_ls_metrics(
-                        scheme=scheme, df=filtered_df, load_profile=load_profile_df
-                    )
 
             if missing_scheme:
                 for scheme in missing_scheme:

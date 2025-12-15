@@ -11,12 +11,12 @@ from pages.load_shedding.helper import display_ls_metrics
 
 
 def ls_reviewer():
-    load_profile_df = st.session_state["load_profile"]
-    total_mw = load_profile_df["Pload (MW)"].sum()
-    north_MW = load_profile_metric(load_profile_df, "North")
-    kValley_MW = load_profile_metric(load_profile_df, "KlangValley")
-    south_MW = load_profile_metric(load_profile_df, "South")
-    east_MW = load_profile_metric(load_profile_df, "East")
+    loadprofile = st.session_state["loadprofile"]
+    total_mw = loadprofile.totalMW()
+    north_mw = loadprofile.regional_loadprofile("North")
+    kvalley_mw = loadprofile.regional_loadprofile("KlangValley")
+    south_mw = loadprofile.regional_loadprofile("South")
+    east_mw = loadprofile.regional_loadprofile("East")
 
     loadshedding = st.session_state["loadshedding"]
     ufls_assignment = loadshedding.ufls_assignment
@@ -75,7 +75,7 @@ def ls_reviewer():
 
     with tab2_s2_col1:
         st.metric(
-            f"Total Latest MD: {int(total_mw):,} MW",
+            f"Total Latest MD: {total_mw:,} MW",
             f"Target {ls_scheme}: {int(target*total_mw):,} MW ({int((target*total_mw/total_mw)*100)}%)",
         )
 
@@ -83,22 +83,22 @@ def ls_reviewer():
         colf2_1, colf2_2 = st.columns(2)
         with colf2_1:
             st.metric(
-                label=f"North: {int(north_MW):,} MW",
-                value=f"Target: {int(target*north_MW):,} MW ({int((target*north_MW/north_MW)*100)}%)",
+                label=f"North: {north_mw:,} MW",
+                value=f"Target: {int(target*north_mw):,} MW ({int((target*north_mw/north_mw)*100)}%)",
             )
             st.metric(
-                label=f"Klang Valley: {int(kValley_MW):,} MW",
-                value=f"Target: {int(target*kValley_MW):,} MW ({int((target*kValley_MW/kValley_MW)*100)}%)",
+                label=f"Klang Valley: {kvalley_mw:,} MW",
+                value=f"Target: {int(target*kvalley_mw):,} MW ({int((target*kvalley_mw/kvalley_mw)*100)}%)",
             )
 
         with colf2_2:
             st.metric(
-                label=f"South: {int(south_MW):,} MW",
-                value=f"Target: {int(target*south_MW):,} MW ({int((target*south_MW/south_MW)*100)}%)",
+                label=f"South: {south_mw:,} MW",
+                value=f"Target: {int(target*south_mw):,} MW ({int((target*south_mw/south_mw)*100)}%)",
             )
             st.metric(
-                label=f"East: {int(east_MW):,} MW",
-                value=f"Target: {int(target*east_MW):,} MW ({int((target*east_MW/east_MW)*100)}%)",
+                label=f"East: {east_mw:,} MW",
+                value=f"Target: {int(target*east_mw):,} MW ({int((target*east_mw/east_mw)*100)}%)",
             )
 
     with tab2_s2_col3:
@@ -121,11 +121,7 @@ def ls_reviewer():
 
     if show_table:
 
-        # df_id_duplicates = available_assignment[available_assignment.duplicated(subset=['local_trip_id', 'mnemonic', 'feeder_id'], keep=False)]
-        # st.dataframe(df_id_duplicates)
-
         avail_quantum_mw = remove_duplicate["Pload (MW)"].sum()
-
         north_avail_MW = load_profile_metric(remove_duplicate, "North")
         kValley_avail_MW = load_profile_metric(remove_duplicate, "KlangValley")
         south_avail_MW = load_profile_metric(remove_duplicate, "South")
@@ -144,21 +140,21 @@ def ls_reviewer():
             with col_s3_1:
                 st.metric(
                     label=f"North: ",
-                    value=f"{int(north_avail_MW):,} MW ({int((north_avail_MW/north_MW)*100)}%)",
+                    value=f"{int(north_avail_MW):,} MW ({int((north_avail_MW/north_mw)*100)}%)",
                 )
                 st.metric(
                     label=f"Klang Valley: ",
-                    value=f"{int(kValley_avail_MW):,} MW ({int((kValley_avail_MW/kValley_MW)*100)}%)",
+                    value=f"{int(kValley_avail_MW):,} MW ({int((kValley_avail_MW/kvalley_mw)*100)}%)",
                 )
 
             with col_s3_2:
                 st.metric(
                     label=f"South: ",
-                    value=f"{int(south_avail_MW):,} MW ({int((south_avail_MW/south_MW)*100)}%)",
+                    value=f"{int(south_avail_MW):,} MW ({int((south_avail_MW/south_mw)*100)}%)",
                 )
                 st.metric(
                     label=f"East: ",
-                    value=f"{int(east_avail_MW):,} MW ({int((east_avail_MW/east_MW)*100)}%)",
+                    value=f"{int(east_avail_MW):,} MW ({int((east_avail_MW/east_mw)*100)}%)",
                 )
 
         with tab2_s3_col3:

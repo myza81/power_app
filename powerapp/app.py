@@ -33,8 +33,22 @@ st.markdown(
         [data-testid="stMetricDelta"] > div {
             font-size: 18px; 
         }
+        div[data-testid="stDataFrame"] .ag-cell {
+            /* Use flexbox to control alignment */
+            display: flex !important;
+            /* Vertically center the content */
+            align-items: center !important; 
+            /* Optionally, horizontally center the content */
+            justify-content: center !important; 
+        }
+        /* If you only want to align the header content */
+        div[data-testid="stDataFrame"] .ag-header-cell-text {
+            text-align: center !important;
+        }
         </style>
     """, unsafe_allow_html=True)
+
+
 
 # -- page setup --#
 home = st.Page(
