@@ -22,7 +22,7 @@ def operating_stages_bar(df, scheme):
             x=scheme,
             y="Load (MW)",
             color="zone",
-            title=f"{scheme} Operating Staging and Load Quantum (MW)"
+            title=f"{scheme} Regional Zone Distribution"
         )
 
         fig_shed.update_layout(

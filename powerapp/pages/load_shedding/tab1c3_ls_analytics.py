@@ -121,12 +121,12 @@ def overlap_operating_critical_list(df, scheme):
         on=scheme,
         how="left"
     )
-    merged_critical["Balanced Load"] =  merged_critical["Pload (MW)"] -  merged_critical["Critical Load"].fillna(0)
+    merged_critical["Non-critical Load"] =  merged_critical["Pload (MW)"] -  merged_critical["Critical Load"].fillna(0)
     merged_critical = merged_critical.drop(columns=["Pload (MW)"], axis=1)
 
     df_melted = merged_critical.melt(
         id_vars=[scheme],
-        value_vars=["Critical Load", "Balanced Load"],
+        value_vars=["Critical Load", "Non-critical Load"],
         var_name="Type",
         value_name="Quantum (MW)"
     )
@@ -139,9 +139,9 @@ def overlap_operating_critical_list(df, scheme):
             color='Type',
             color_discrete_map={
                 'Critical Load': 'red',
-                'Balanced Load': '#4FC998'
+                'Non-critical Load': "#DFE6E3"
             },
-            title=f"{scheme} Operating Staging with Critical Substation"
+            title=f"{scheme} Assignment Vs Critical Load"
         )
 
     fig_shed.update_layout(
@@ -156,6 +156,8 @@ def overlap_operating_critical_list(df, scheme):
         height=450,
         width=600,
         legend_title_text='',
+        xaxis_title=None,
+        yaxis_title="Demand (MW)",
     )
 
     st.plotly_chart(fig_shed, width='content')

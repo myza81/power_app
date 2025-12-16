@@ -148,15 +148,82 @@ def overlap_ls():
                 df_final_display, width="stretch", hide_index=True
             )
 
-        ### dashbaord ##################
-        data = {
-            "review_year": review_year,
-            "selected_ls_scheme": selected_ls_scheme,
-            "overlap_list": overlap_list,
-            "masterlist_ls": masterlist_ls
-        }
+            selected_scheme = [
+                f"{scheme}_{review_year}" for scheme in selected_ls_scheme]
 
-        critical_list_dashboard(data)
+            missing_scheme = set(selected_scheme).difference(
+                set(filtered_df.columns)
+            )
+
+            available_scheme_set = set(selected_scheme).intersection(
+                set(filtered_df.columns)
+            )
+            
+            columns = st.columns(len(available_scheme_set))
+
+            for column, ls_review in zip(columns, available_scheme_set):
+
+                df_list = masterlist_ls[[ls_review, "Pload (MW)"]].replace(["nan", "#na"], np.nan).groupby(
+                    [ls_review],
+                    as_index=False
+                ).agg({"Pload (MW)": "sum"})
+
+                scheme_df = filtered_df[[ls_review, "Pload (MW)"]].groupby(
+                    [ls_review],
+                    as_index=False
+                ).agg({"Pload (MW)": "sum"})
+                scheme_df = scheme_df.rename(
+                    columns={"Pload (MW)": "Critical Load"})
+
+                merged_df = pd.merge(
+                    df_list,
+                    scheme_df,
+                    on=ls_review,
+                    how="left"
+                )
+                merged_df["Non-critical Load"] = merged_df["Pload (MW)"] - \
+                    merged_df["Critical Load"].fillna(0)
+
+                df_melted = merged_df.melt(
+                    id_vars=[ls_review],
+                    value_vars=['Critical Load', 'Non-critical Load'],
+                    var_name='load_type',
+                    value_name='mw'
+                )
+
+                df_melted = scheme_col_sorted(df_melted, ls_review)
+
+                with column:
+                    fig_shed = px.bar(
+                        df_melted,
+                        x=ls_review,
+                        y='mw',
+                        color='load_type',
+                        color_discrete_map={
+                            'Non-critical Load': 'lightgrey',
+                            'Critical Load': 'red'
+                        },
+                        title="Load Shedding Overlap"
+                    )
+
+                    fig_shed.update_layout(
+                        title={
+                            'text': f"{ls_review} Vs Critical Load",
+                            'font': {
+                                'size': 18,
+                                'family': 'Arial'
+                            },
+                            'x': 0.5,  # Center the title horizontally
+                            'xanchor': 'center'
+                        },
+                        xaxis_title=None,
+                        yaxis_title="Demand (MW)",
+                        height=400,
+                        width=600,
+                        legend_title_text=''
+                    )
+
+                    st.plotly_chart(fig_shed, width='content')
 
         if missing_scheme:
             for scheme in missing_scheme:
