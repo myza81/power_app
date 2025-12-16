@@ -1,5 +1,7 @@
 import pandas as pd
+import numpy as np
 import streamlit as st
+import plotly.express as px
 import time
 from datetime import date
 from typing import List, Optional, Sequence, Any
@@ -29,8 +31,7 @@ def ls_data_viewer() -> None:
 
     st.subheader("Load Sheddding Assignment")
 
-    show_table = st.checkbox(
-        "**Show Load Shedding Assignment List**", value=False)
+    show_table = st.checkbox("**Show Load Shedding Assignment List**", value=True)
 
     if show_table:
         col1, col2, col3 = st.columns(3)
@@ -39,14 +40,15 @@ def ls_data_viewer() -> None:
 
         with col1:
             review_year_list = columns_list(
-                ufls_assignment, unwanted_el=["assignment_id"])
+                ufls_assignment, unwanted_el=["assignment_id"]
+            )
             review_year_list.sort(reverse=True)
-            review_year = st.selectbox(
-                label="Review Year", options=review_year_list)
+            review_year = st.selectbox(label="Review Year", options=review_year_list)
 
         with col2:
             ls_scheme = st.multiselect(
-                label="Scheme", options=LS_SCHEME, default="UFLS")
+                label="Scheme", options=LS_SCHEME, default="UFLS"
+            )
             selected_ls_scheme = LS_SCHEME if ls_scheme == [] else ls_scheme
 
         with col3:
@@ -59,7 +61,8 @@ def ls_data_viewer() -> None:
                 "gm_subzone",
             )
             subzone_selected = st.multiselect(
-                label="Grid Maintenace Subzone", options=subzone)
+                label="Grid Maintenace Subzone", options=subzone
+            )
 
         with col5:
             ls_stage_options = ufls_setting.columns.tolist()
@@ -86,8 +89,7 @@ def ls_data_viewer() -> None:
             "ls_dp": trip_assignment,
         }
 
-        filtered_data = loadshedding.filtered_data(
-            filters=filters, df=masterlist_ls)
+        filtered_data = loadshedding.filtered_data(filters=filters, df=masterlist_ls)
 
         if not filtered_data.empty:
 
@@ -110,17 +112,20 @@ def ls_data_viewer() -> None:
                 )
                 filtered_df = df_search_filter(filtered_data, search_query)
 
-            ls_cols = [col for col in filtered_df.columns if any(
-                keyword in col for keyword in LS_SCHEME)]
+            ls_cols = [
+                col
+                for col in filtered_df.columns
+                if any(keyword in col for keyword in LS_SCHEME)
+            ]
 
             # add with hv relay loc
-            hvcb_rly['kV'] = hvcb_rly['kV'].astype(str)
+            hvcb_rly["kV"] = hvcb_rly["kV"].astype(str)
             hvcb_rly = hvcb_rly.rename(
                 columns={
                     "breaker_id": "Breaker(s)",
-                    "feeder_id": "Feeder Assignmnet",
+                    "feeder_id": "Feeder Assignment",
                     "mnemonic": "Mnemonic",
-                    'kV': 'Voltage Level'
+                    "kV": "Voltage Level",
                 }
             )
 
@@ -143,17 +148,17 @@ def ls_data_viewer() -> None:
             merge_rly_loc["Breaker(s)"] = merge_rly_loc["Breaker(s)"].fillna(
                 merge_rly_loc["breaker_id"]
             )
-            merge_rly_loc["Feeder Assignmnet"] = merge_rly_loc["Feeder Assignmnet"].fillna(
-                merge_rly_loc["feeder_id"]
-            )
+            merge_rly_loc["Feeder Assignment"] = merge_rly_loc[
+                "Feeder Assignment"
+            ].fillna(merge_rly_loc["feeder_id"])
 
             column_order = ls_cols + [
                 "Mnemonic",
                 "Voltage Level",
                 "Breaker(s)",
-                "Feeder Assignmnet",
+                "Feeder Assignment",
                 "assignment_id",
-                "ls_dp"
+                "ls_dp",
             ]
 
             merge_rly_loc = merge_rly_loc[column_order]
@@ -163,29 +168,46 @@ def ls_data_viewer() -> None:
                 subs_metadata,
                 left_on="Mnemonic",
                 right_on="mnemonic",
-                how="left"
-            )[merge_rly_loc.columns.tolist() + ["zone", "gm_subzone", "substation_name"]]
+                how="left",
+            )[
+                merge_rly_loc.columns.tolist()
+                + ["zone", "gm_subzone", "substation_name"]
+            ]
 
             grp_df = merge_rly_meta.groupby(
-                ls_cols + ["substation_name", "Mnemonic", "Voltage Level", "assignment_id", "ls_dp"], as_index=False, dropna=False
+                ls_cols
+                + [
+                    "substation_name",
+                    "Mnemonic",
+                    "Voltage Level",
+                    "assignment_id",
+                    "ls_dp",
+                ],
+                as_index=False,
+                dropna=False,
             ).agg(
                 {
                     "zone": lambda x: ", ".join(x.astype(str).unique()),
                     "gm_subzone": lambda x: ", ".join(x.astype(str).unique()),
                     "Breaker(s)": lambda x: ", ".join(x.astype(str).unique()),
-                    "Feeder Assignmnet": lambda x: ", ".join(x.astype(str).unique()),
+                    "Feeder Assignment": lambda x: ", ".join(x.astype(str).unique()),
                 }
             )
 
-            grp_df = grp_df.rename(columns={
-                "zone": "Regional Zone",
-                "gm_subzone": "Grid Maint. Subzone",
-                "substation_name": "Substation",
-                "ls_dp": "Type"
-            })
+            grp_df = grp_df.rename(
+                columns={
+                    "zone": "Regional Zone",
+                    "gm_subzone": "Grid Maint. Subzone",
+                    "substation_name": "Substation",
+                    "ls_dp": "Type",
+                }
+            )
 
-            sorted_df = scheme_col_sorted(grp_df, available_scheme_set, [
-                                          "assignment_id", "Regional Zone", "Grid Maint. Subzone"])
+            sorted_df = scheme_col_sorted(
+                grp_df,
+                available_scheme_set,
+                ["assignment_id", "Regional Zone", "Grid Maint. Subzone"],
+            )
 
             columns_order = ls_cols + [
                 "Regional Zone",
@@ -194,24 +216,24 @@ def ls_data_viewer() -> None:
                 "Mnemonic",
                 "Voltage Level",
                 "Breaker(s)",
-                "Feeder Assignmnet",
+                "Feeder Assignment",
                 "Type",
                 "assignment_id",
             ]
 
             df_final_display = sorted_df.reindex(columns=columns_order)
 
-            st.dataframe(
-                df_final_display, width="stretch", hide_index=True
-            )
+            st.dataframe(df_final_display, width="stretch", hide_index=True)
 
-            col10, col11, col12, col13 = st.columns([1.8, 1.2, 0.1, 5])
+            col10, col11, col12, col13, col14 = st.columns([1.8, 1.2, 0.1, 2, 2])
 
             with col10:
                 ls_name = [ls for ls in available_scheme_set]
                 combine_ls_name = "_".join(ls_name)
                 today = date.today()
-                default_filename = f"{combine_ls_name}_downloadOn_{today.strftime("%d%m%Y")}"
+                default_filename = (
+                    f"{combine_ls_name}_downloadOn_{today.strftime("%d%m%Y")}"
+                )
 
                 filename = st.text_input(
                     label="Enter filename: ",
@@ -227,15 +249,126 @@ def ls_data_viewer() -> None:
                     data=excel_data,
                     file_name=f"{filename}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="export_button"
+                    key="export_button",
                 )
 
             if export_btn:
                 show_temporary_message(
-                    message_type='info',
+                    message_type="info",
                     message=f"File will be saved as **{filename}** to your browser's downloads folder.",
-                    duration=3
+                    duration=3,
                 )
+
+            for ls_sch in available_scheme_set:
+                col15, col16, col17, col18, col14 = st.columns([2, 0.1, 2, 0.1, 2])
+
+                with col15:
+                    filtered_data[ls_sch] = filtered_data[ls_sch].replace("nan", np.nan)
+
+                    zone_ls = (
+                        filtered_data[[ls_sch, "zone", "Pload (MW)"]]
+                        .groupby(["zone", ls_sch], as_index=False)
+                        .agg({"Pload (MW)": "sum"})
+                    )
+
+                    st.markdown(
+                        f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{ls_sch} Assignment - Filtered by Regional Zone</p>",
+                        unsafe_allow_html=True,
+                    )
+                    fig = px.pie(
+                        zone_ls,
+                        values="Pload (MW)",
+                        names="zone",
+                        title=" ",
+                    )
+                    fig.update_traces(
+                        hole=0.5,
+                        hoverinfo="label+percent+value",
+                        # textinfo='value+percent+label',
+                        texttemplate="<b>%{label}</b><br>"
+                        + "%{value:,.0f} MW"+" (%{percent})",
+                        textfont_size=12,
+                        textposition="auto",
+                    )
+                    fig.update_layout(
+                        title=dict(
+                            font=dict(size=15),
+                            y=0.5,
+                            x=0.5,
+                            xanchor="center",
+                            xref="paper",
+                        ),
+                        showlegend=False,
+                        height=230,
+                        width=250,
+                        margin=dict(t=20, b=40, l=3, r=3),
+                        annotations=[
+                            dict(
+                                text=f"{zone_ls["Pload (MW)"].sum():,.0f} MW",
+                                x=0.5,
+                                y=0.5,
+                                font_size=20,
+                                showarrow=False,
+                                align="center",
+                            )
+                        ],
+                    )
+
+                    st.plotly_chart(fig, width="stretch", key=f"{ls_sch}_filtered_region")
+
+                with col17:
+                    filtered_data[ls_sch] = filtered_data[ls_sch].replace("nan", np.nan)
+                    ls_dp = (
+                        filtered_data[[ls_sch, "ls_dp", "Pload (MW)"]]
+                        .groupby(["ls_dp", ls_sch], as_index=False)
+                        .agg({"Pload (MW)": "sum"})
+                    )
+
+                    st.markdown(
+                        f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{ls_sch} Assignment - Filtered by Load Type</p>",
+                        unsafe_allow_html=True,
+                    )
+                    fig = px.pie(
+                        ls_dp,
+                        values="Pload (MW)",
+                        names="ls_dp",
+                        title=" ",
+                    )
+                    fig.update_traces(
+                        hole=0.5,
+                        hoverinfo="label+percent+value",
+                        # textinfo='value+percent+label',
+                        texttemplate="<b>%{label}</b><br>"
+                        + "%{value:,.0f} MW"
+                        + " (%{percent})",
+                        textfont_size=12,
+                        textposition="auto",
+                    )
+                    fig.update_layout(
+                        title=dict(
+                            font=dict(size=15),
+                            y=0.5,
+                            x=0.5,
+                            xanchor="center",
+                            xref="paper",
+                        ),
+                        showlegend=False,
+                        height=230,
+                        width=250,
+                        margin=dict(t=20, b=40, l=3, r=3),
+                        annotations=[
+                            dict(
+                                text=f"{ls_dp["Pload (MW)"].sum():,.0f} MW",
+                                x=0.5,
+                                y=0.5,
+                                font_size=20,
+                                showarrow=False,
+                                align="center",
+                            )
+                        ],
+                    )
+
+                    st.plotly_chart(fig, width="stretch", key=f"{ls_sch}_filtered_dp")
 
             if missing_scheme:
                 for scheme in missing_scheme:
@@ -244,4 +377,5 @@ def ls_data_viewer() -> None:
                     )
         else:
             st.info(
-                "No active load shedding assignment found for the selected filters.")
+                "No active load shedding assignment found for the selected filters."
+            )

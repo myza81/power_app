@@ -49,7 +49,7 @@ def operating_stages_bar(df, scheme):
 
         ls_table = scheme_col_sorted(ls_table, scheme)
         st.markdown(
-            f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{scheme} Operating Staging and Load Quantum Table :</p>",
+            f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{scheme} Operating Staging and Load Quantum Table:</p>",
             unsafe_allow_html=True,
         )
         st.dataframe(ls_table, hide_index=True)

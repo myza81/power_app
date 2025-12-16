@@ -41,15 +41,14 @@ def load_type_pie(df, scheme):
         ls_operstage_grp,
         values='Load Shed Quantum (MW)',
         names='ls_dp',
-        title='Load Type'
+        title=' '
     )
     fig.update_traces(
         hole=.5,
         hoverinfo="label+percent+value",
         # textinfo='value+percent+label',
         texttemplate="<b>%{label}</b><br>" +
-        "%{value:,.0f} MW<br>" +
-        "(%{percent})",
+        "%{value:,.0f} MW"+ "(%{percent})",
         textfont_size=12,
         textposition='auto',
     )

@@ -44,8 +44,9 @@ def ls_dashboard():
     filtered_data = loadshedding.filtered_data(
         filters=filters, df=masterlist_ls)
 
+    available_scheme_set = []
+    missing_scheme = []
     if not filtered_data.empty:
-
         selected_inp_scheme = [
             f"{scheme}_{review_year}" for scheme in selected_scheme
         ]
@@ -66,10 +67,9 @@ def ls_dashboard():
         clean_scheme_df = scheme_df.dropna(subset=[scheme])
 
         regional_lshedding_stacked(clean_scheme_df, scheme)
-       
+
         operating_stages_bar(clean_scheme_df, scheme)
         lshedding_analytics(clean_scheme_df, scheme)
-
 
         # bar chart for regional MW each stage
         # total local load
@@ -82,5 +82,3 @@ def ls_dashboard():
             st.info(
                 f"No active load shedding {scheme} assignment found for the selected filters."
             )
-
-

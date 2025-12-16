@@ -175,8 +175,7 @@ def load_profile_identifier():
     )
     load_profile_subs["Substation Name"] = np.where(
         load_profile_subs["substation_name"].notna(),
-        load_profile_subs["Mnemonic"] +
-        " (" + load_profile_subs["substation_name"] + ")",
+        load_profile_subs["Mnemonic"] + " (" + load_profile_subs["substation_name"] + ")",
         load_profile_subs["Mnemonic"]
     )
 
