@@ -1,14 +1,9 @@
 import streamlit as st
-
-from applications.load_shedding.helper import (
-    columns_list
-)
-
-from css.streamlit_css import vertical_center_css
+from applications.load_shedding.helper import columns_list
 from pages.load_shedding.tab1c1_regional import regional_lshedding_stacked
 from pages.load_shedding.tab1c2_operating_stages import operating_stages_bar
 from pages.load_shedding.tab1c3_ls_analytics import lshedding_analytics
-
+from css.streamlit_css import vertical_center_css
 
 def ls_dashboard():
     loadshedding = st.session_state["loadshedding"]
@@ -67,15 +62,8 @@ def ls_dashboard():
         clean_scheme_df = scheme_df.dropna(subset=[scheme])
 
         regional_lshedding_stacked(clean_scheme_df, scheme)
-
         operating_stages_bar(clean_scheme_df, scheme)
         lshedding_analytics(clean_scheme_df, scheme)
-
-        # bar chart for regional MW each stage
-        # total local load
-        # total pocket load
-        # selection local load by zone
-        # selection each pocket
 
     if missing_scheme:
         for scheme in missing_scheme:

@@ -63,7 +63,7 @@ def regional_lshedding_stacked(df, scheme):
                     'size': 18,
                     'family': 'Arial'
                 },
-                'x': 0.5,  # Center the title horizontally
+                'x': 0.5,
                 'xanchor': 'center'
             },
             xaxis_title=None,

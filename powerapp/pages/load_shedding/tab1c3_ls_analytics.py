@@ -17,8 +17,6 @@ def lshedding_analytics(df, scheme):
     with col4:
         overlap_operating_critical_list(df, scheme)
 
-    st.divider()
-
 
 def load_type_pie(df, scheme):
     ls_operstage = df[["ls_dp", "Pload (MW)"]]
@@ -29,7 +27,7 @@ def load_type_pie(df, scheme):
 
     ls_operstage_grp = ls_operstage_grp.rename(
         columns={"Pload (MW)": "Load Shed Quantum (MW)"})
-    
+
     total_ls_quantum = ls_operstage_grp["Load Shed Quantum (MW)"].sum()
 
     st.markdown(
@@ -48,7 +46,7 @@ def load_type_pie(df, scheme):
         hoverinfo="label+percent+value",
         # textinfo='value+percent+label',
         texttemplate="<b>%{label}</b><br>" +
-        "%{value:,.0f} MW"+ "(%{percent})",
+        "%{value:,.0f} MW" + "(%{percent})",
         textfont_size=12,
         textposition='auto',
     )
@@ -101,7 +99,7 @@ def find_spesific_load(df, scheme):
 
 
 def overlap_operating_critical_list(df, scheme):
-    
+
     oper_stage = df[[scheme, "Pload (MW)"]].groupby(
         [scheme],
         as_index=False
@@ -113,7 +111,8 @@ def overlap_operating_critical_list(df, scheme):
         [scheme],
         as_index=False
     ).agg({"Pload (MW)": "sum"})
-    critical_list_clean = critical_list_clean.rename(columns={"Pload (MW)": "Critical Load"})
+    critical_list_clean = critical_list_clean.rename(
+        columns={"Pload (MW)": "Critical Load"})
 
     merged_critical = pd.merge(
         oper_stage,
@@ -121,7 +120,8 @@ def overlap_operating_critical_list(df, scheme):
         on=scheme,
         how="left"
     )
-    merged_critical["Non-critical Load"] =  merged_critical["Pload (MW)"] -  merged_critical["Critical Load"].fillna(0)
+    merged_critical["Non-critical Load"] = merged_critical["Pload (MW)"] - \
+        merged_critical["Critical Load"].fillna(0)
     merged_critical = merged_critical.drop(columns=["Pload (MW)"], axis=1)
 
     df_melted = merged_critical.melt(
@@ -133,16 +133,16 @@ def overlap_operating_critical_list(df, scheme):
     df_melted = scheme_col_sorted(df_melted, scheme)
 
     fig_shed = px.bar(
-            df_melted,
-            x=scheme,
-            y="Quantum (MW)",
-            color='Type',
-            color_discrete_map={
-                'Critical Load': 'red',
-                'Non-critical Load': "#DFE6E3"
-            },
-            title=f"{scheme} Assignment Vs Critical Load"
-        )
+        df_melted,
+        x=scheme,
+        y="Quantum (MW)",
+        color='Type',
+        color_discrete_map={
+            'Critical Load': 'red',
+            'Non-critical Load': "#DFE6E3"
+        },
+        title=f"{scheme} Assignment Vs Critical Load"
+    )
 
     fig_shed.update_layout(
         title={
@@ -161,7 +161,3 @@ def overlap_operating_critical_list(df, scheme):
     )
 
     st.plotly_chart(fig_shed, width='content')
-    
-def overlap_within_ls(df, scheme):
-    pass
-
