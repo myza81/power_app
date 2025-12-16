@@ -7,7 +7,7 @@ from applications.load_shedding.helper import (
 from css.streamlit_css import vertical_center_css
 from pages.load_shedding.tab1c1_regional import regional_lshedding_stacked
 from pages.load_shedding.tab1c2_operating_stages import operating_stages_bar
-from pages.load_shedding.tab1c3_load_type import lshedding_pie_chart
+from pages.load_shedding.tab1c3_ls_analytics import lshedding_analytics
 
 
 def ls_dashboard():
@@ -66,9 +66,9 @@ def ls_dashboard():
         clean_scheme_df = scheme_df.dropna(subset=[scheme])
 
         regional_lshedding_stacked(clean_scheme_df, scheme)
-        # st.divider()
+       
         operating_stages_bar(clean_scheme_df, scheme)
-        lshedding_pie_chart(clean_scheme_df, scheme)
+        lshedding_analytics(clean_scheme_df, scheme)
 
 
         # bar chart for regional MW each stage
