@@ -22,7 +22,7 @@ def operating_stages_bar(df, scheme):
             x=scheme,
             y="Load (MW)",
             color="zone",
-            title=f"{scheme} Operating Staging Quantum (MW)"
+            title=f"{scheme} Operating Staging and Load Quantum (MW)"
         )
 
         fig_shed.update_layout(
@@ -48,4 +48,8 @@ def operating_stages_bar(df, scheme):
         ).agg({"Load (MW)": "sum"})
 
         ls_table = scheme_col_sorted(ls_table, scheme)
+        st.markdown(
+            f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{scheme} Operating Staging and Load Quantum Table :</p>",
+            unsafe_allow_html=True,
+        )
         st.dataframe(ls_table, hide_index=True)

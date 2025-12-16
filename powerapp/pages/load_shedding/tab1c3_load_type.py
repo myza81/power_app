@@ -5,11 +5,15 @@ from css.streamlit_css import vertical_center_css
 
 def lshedding_pie_chart(df, scheme):
     col1, col2, col3 = st.columns([2, 0.1, 2])
+    col4, col5, col6 = st.columns([2, 0.1, 2])
 
     with col1:
         load_type_pie(df, scheme)
     with col3:
         find_spesific_load(df, scheme)
+    with col4:
+        overlap_operating_critical_list(df, scheme)
+
     st.divider()
 
 
@@ -79,8 +83,21 @@ def find_spesific_load(df, scheme):
         total_load.append(mw)
 
     quantum = sum(total_load)
-    st.metric(
-        label="Total Load Quantum:",
-        value=f"{quantum:,.1f} MW",
-
+    st.markdown(
+        f"<p style='margin-top:30px; font-size:14px; font-weight: 700; font-family: Arial'>Total Load Quantum :</p>",
+        unsafe_allow_html=True,
     )
+    st.markdown(
+        f"<p style='margin-top:-20px; color:#2E86C1; font-size:30px; font-weight: 700'>{quantum:,.1f} MW</p>",
+        unsafe_allow_html=True,
+    )
+
+
+def overlap_operating_critical_list(df, scheme):
+    st.dataframe(df)
+    
+
+    
+def overlap_within_ls(df, scheme):
+    pass
+

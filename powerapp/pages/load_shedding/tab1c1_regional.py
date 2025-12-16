@@ -84,7 +84,7 @@ def regional_lshedding_stacked(df, scheme):
             unsafe_allow_html=True,
         )
         st.markdown(
-            f"<p style='margin-top:-20px; color:#27EBF5; font-size:25px; font-weight: 600'>{total_ls:,.0f} MW ({ls_pct}%)</p>",
+            f"<p style='margin-top:-20px; color:#2E86C1; font-size:25px; font-weight: 600'>{total_ls:,.0f} MW ({ls_pct}%)</p>",
             unsafe_allow_html=True,
         )
 
@@ -100,6 +100,6 @@ def regional_lshedding_stacked(df, scheme):
                 unsafe_allow_html=True,
             )
             st.markdown(
-                f"<p style='margin-top:-20px; color:#27EBF5; font-size:22px; font-weight: 600'>{zone_ls:,.0f} MW ({zone_ls_pct}%)</p>",
+                f"<p style='margin-top:-20px; color:#2E86C1; font-size:22px; font-weight: 600'>{zone_ls:,.0f} MW ({zone_ls_pct}%)</p>",
                 unsafe_allow_html=True,
             )
