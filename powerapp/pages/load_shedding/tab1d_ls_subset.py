@@ -5,6 +5,7 @@ import plotly.express as px
 
 from applications.load_shedding.ufls_setting import UFLS_SETTING
 from pages.load_shedding.helper import find_latest_assignment
+from applications.load_shedding.helper import scheme_col_sorted
 
 
 def loadshedding_subset():
@@ -83,6 +84,14 @@ def loadshedding_subset():
                 on=ref_scheme,
                 how="left"
             )
+
+    # df_melted = clean_ref_ls_mw.melt(
+    #     id_vars=[ref_scheme],
+    #     value_vars=["Critical Load", "Non-critical Load", ],
+    #     var_name="Type",
+    #     value_name="Quantum (MW)"
+    # )
+    # df_melted = scheme_col_sorted(df_melted, scheme)
 
     st.dataframe(clean_ref_ls_mw)
 
