@@ -207,7 +207,7 @@ class LoadShedding:
             how="left",
         )
 
-        load = load.fillna("nan")
+        # load = load.fillna("nan")
         load = load.astype(str)
         load["Pload (MW)"] = pd.to_numeric(load["Pload (MW)"], errors="coerce").fillna(
             0
@@ -238,6 +238,7 @@ class LoadShedding:
                 "long_text",
             ],
             as_index=False,
+            dropna=False
         ).agg(
             {
                 "Pload (MW)": "sum",
@@ -262,8 +263,8 @@ class LoadShedding:
                 left, right, on="assignment_id", how="outer"),
             [ufls, uvls, emls],
         )
-        ls_masterlist = ls_masterlist.fillna("nan")
-        ls_masterlist = ls_masterlist.astype(str)
+        # ls_masterlist = ls_masterlist.fillna("nan")
+        # ls_masterlist = ls_masterlist.astype(str)
 
         ls_master_w_load = pd.DataFrame()
         if not self.dp_grpId_loadquantum().empty:
@@ -381,6 +382,7 @@ class LoadShedding:
         hvcb_rly = hvcb_dp.groupby(
             ["group_trip_id", "mnemonic", "local_trip_id", "assignment_id"],
             as_index=False,
+            dropna=False
         ).agg(
             {
                 "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
