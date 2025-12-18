@@ -14,8 +14,7 @@ def find_correct_header(uploaded_file, required_keywords, optional_groups=None):
     # --- Helper to check keyword presence ---
     def check_keywords(df):
         columns = [str(c).lower().strip() for c in df.columns]
-        # print("columns", columns)
-
+  
         def is_partial_match(keyword, col):
             pattern = re.sub(r"[^a-z0-9]", ".*", keyword.lower())
             return re.search(pattern, col) is not None

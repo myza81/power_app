@@ -18,6 +18,8 @@ from pages.load_shedding.helper import display_ls_metrics, show_temporary_messag
 
 def ls_data_viewer() -> None:
     loadprofile = st.session_state["loadprofile"]
+    load_df = loadprofile.df
+
     loadshedding = st.session_state["loadshedding"]
     ufls_assignment = loadshedding.ufls_assignment
     ufls_setting = loadshedding.ufls_setting
@@ -225,7 +227,7 @@ def ls_data_viewer() -> None:
 
             st.dataframe(df_final_display, width="stretch", hide_index=True)
 
-            col10, col11, col12, col13, col14 = st.columns([1.8, 1.2, 0.1, 2, 2])
+            col10, col11, col12, col13, col14 = st.columns([1.8, 1.5, 0.1, 2, 2])
 
             with col10:
                 ls_name = [ls for ls in available_scheme_set]
@@ -260,16 +262,26 @@ def ls_data_viewer() -> None:
                 )
 
             for ls_sch in available_scheme_set:
-                col15, col16, col17, col18, col14 = st.columns([2, 0.1, 2, 0.1, 2])
+                col15, col16, col17, col18, col19 = st.columns([2, 0.1, 2, 0.1, 2])
+
+                filtered_data[ls_sch] = filtered_data[ls_sch].replace("nan", np.nan)
+
+                zone_ls = (
+                    filtered_data[[ls_sch, "zone", "Pload (MW)"]]
+                    .groupby(["zone", ls_sch], as_index=False)
+                    .agg({"Pload (MW)": "sum"})
+                )
+
+                load_df_grp = (
+                    load_df[["zone", "Pload (MW)"]]
+                    .groupby(
+                        ["zone"],
+                        as_index=False,
+                    )
+                    .agg({"Pload (MW)": "sum"})
+                )
 
                 with col15:
-                    filtered_data[ls_sch] = filtered_data[ls_sch].replace("nan", np.nan)
-
-                    zone_ls = (
-                        filtered_data[[ls_sch, "zone", "Pload (MW)"]]
-                        .groupby(["zone", ls_sch], as_index=False)
-                        .agg({"Pload (MW)": "sum"})
-                    )
 
                     st.markdown(
                         f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{ls_sch} Assignment - Filtered by Regional Zone</p>",
@@ -286,7 +298,8 @@ def ls_data_viewer() -> None:
                         hoverinfo="label+percent+value",
                         # textinfo='value+percent+label',
                         texttemplate="<b>%{label}</b><br>"
-                        + "%{value:,.0f} MW"+" (%{percent})",
+                        + "%{value:,.0f} MW"
+                        + " (%{percent})",
                         textfont_size=12,
                         textposition="auto",
                     )
@@ -314,9 +327,47 @@ def ls_data_viewer() -> None:
                         ],
                     )
 
-                    st.plotly_chart(fig, width="stretch", key=f"{ls_sch}_filtered_region")
+                    st.plotly_chart(
+                        fig, width="stretch", key=f"{ls_sch}_filtered_region"
+                    )
 
                 with col17:
+                    total_quantum = load_df_grp["Pload (MW)"].sum()
+                    total_quantum_zone = zone_ls["Pload (MW)"].sum()
+                    ls_pct = (total_quantum_zone / total_quantum) * 100
+
+                    st.markdown(
+                        f"<p style='margin-top:28px; display: flex, align-item: center, justify-content: center'><span style='color:inherit; font-size:20px; font-weight: 600'>Total Load Shed Quantum:</span><br> <span style='font-size:22px; font-weight: 600'>{total_quantum_zone:,.0f} MW ({ls_pct:,.1f}%)</span></p>",
+                        unsafe_allow_html=True,
+                    )
+
+                    zone_grp = zone_ls.groupby("zone", as_index=False).agg(
+                        {
+                            "Pload (MW)": "sum",
+                            ls_sch: lambda x: ", ".join(x.astype(str).unique()),
+                        }
+                    )
+                    zone_list = zone_grp["zone"]
+
+                    for zone in zone_list:
+                        zone_load = loadprofile.regional_loadprofile(zone)
+
+                        zone_ls_quantum = zone_grp.loc[zone_grp["zone"] == zone][
+                            "Pload (MW)"
+                        ].values[0]
+
+                        zone_ls_pct = zone_ls_quantum / zone_load * 100
+
+                        st.markdown(
+                            f"<p style='margin-top:-10px; font-size:14px;'>Quantum Contribution from {zone}:</p>",
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown(
+                            f"<p style='margin-top:-20px; color:#2E86C1; font-size:22px; font-weight: 600'>{zone_ls_quantum:,.0f} MW ({zone_ls_pct:,.1f}%)</p>",
+                            unsafe_allow_html=True,
+                        )
+
+                with col19:
                     filtered_data[ls_sch] = filtered_data[ls_sch].replace("nan", np.nan)
                     ls_dp = (
                         filtered_data[[ls_sch, "ls_dp", "Pload (MW)"]]
@@ -337,7 +388,6 @@ def ls_data_viewer() -> None:
                     fig.update_traces(
                         hole=0.5,
                         hoverinfo="label+percent+value",
-                        # textinfo='value+percent+label',
                         texttemplate="<b>%{label}</b><br>"
                         + "%{value:,.0f} MW"
                         + " (%{percent})",

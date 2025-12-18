@@ -173,10 +173,16 @@ def load_profile_identifier():
             "Id": lambda x: ", ".join(x.astype(str).unique()),
         }
     )
+    combined_name = (
+        load_profile_subs["Mnemonic"].str.cat(
+            load_profile_subs["substation_name"], sep=" (", na_rep=""
+        )
+        + ")"
+    )
     load_profile_subs["Substation Name"] = np.where(
         load_profile_subs["substation_name"].notna(),
-        load_profile_subs["Mnemonic"] + " (" + load_profile_subs["substation_name"] + ")",
-        load_profile_subs["Mnemonic"]
+        combined_name,
+        load_profile_subs["Mnemonic"],
     )
 
     st.markdown(

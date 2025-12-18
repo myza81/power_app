@@ -30,94 +30,111 @@ def loadshedding_subset():
         )
 
     clean_masterlist = masterlist_ls.replace(["nan", "#na"], np.nan)
+    # ref_scheme_rename = f"{ref_scheme} (MW)"
     ref_ls = clean_masterlist[[ref_scheme, "Pload (MW)"]]
     clean_ref_ls = ref_ls.loc[ref_ls[ref_scheme].notna()]
+    # .rename(
+    #     columns={"Pload (MW)": ref_scheme_rename}
+    # )
+    # clean_ref_ls = ref_ls.loc[ref_ls[ref_scheme].notna()]
     clean_ref_ls_mw = clean_ref_ls.groupby(
-        [ref_scheme],
-        as_index=False,
-        dropna=False
+        [ref_scheme], as_index=False, dropna=False
     ).agg({"Pload (MW)": "sum"})
 
-    scheme = ref_scheme.split("_")[0]
+    balanced_col_name = f"Balanced {ref_scheme} (MW)"
+    clean_ref_ls_mw[balanced_col_name] = clean_ref_ls_mw["Pload (MW)"]
+
+    scheme_prefix = str(ref_scheme).split("_")[0]
     lastest_assignment = find_latest_assignment(lshedding_columns)
 
-    loadshedd_df = clean_masterlist[[ref_scheme, "local_trip_id", "assignment_id"]].rename(
-        columns={"assignment_id": f"{ref_scheme}_assignment_id"})
+    loadshedd_df = clean_masterlist[
+        [ref_scheme, "local_trip_id", "assignment_id"]
+    ].copy()
+    loadshedd_df.rename(
+        columns={"assignment_id": f"{ref_scheme}_assignment_id"}, inplace=True
+    )
 
+    scheme_mw_col = [f"Balanced {ref_scheme} (MW)"]
     for ls_scheme in lastest_assignment:
-        if any(keyword not in ls_scheme for keyword in scheme):
+        if scheme_prefix in ls_scheme:
+            continue
 
-            pd_df = clean_masterlist[
-                [ls_scheme, "local_trip_id", "assignment_id", "Pload (MW)"]
-            ]
-            valid_df = pd_df.loc[pd_df[ls_scheme].notna()]
-            merging_df = pd.merge(
-                valid_df,
-                loadshedd_df,
-                on="local_trip_id",
-                how="left"
-            ).dropna()
+        pd_df = clean_masterlist[
+            [ls_scheme, "local_trip_id", "assignment_id", "Pload (MW)"]
+        ]
+        valid_df = pd_df.loc[pd_df[ls_scheme].notna()]
+        merging_df = pd.merge(valid_df, loadshedd_df, on="local_trip_id", how="left")
 
-            merging_df_grp = merging_df.groupby(
-                [ref_scheme]
-            ).agg({
-                "Pload (MW)": "sum",
-                ls_scheme: lambda x: ", ".join(x.astype(str).unique()),
-                "assignment_id": lambda x: ", ".join(x.astype(str).unique()),
-                "local_trip_id": lambda x: ", ".join(x.astype(str).unique()),
-                f"{ref_scheme}_assignment_id": lambda x: ", ".join(x.astype(str).unique()),
-            }).reset_index()
-
-            merging_df_grp = (
-                merging_df_grp[[
-                    ref_scheme, "Pload (MW)", ls_scheme, "local_trip_id", f"{ref_scheme}_assignment_id"]]
-                .rename(columns={
-                    "Pload (MW)": f"{ls_scheme}_mw",
-                    "local_trip_id": f"{ls_scheme}_local_trip_id",
-                    f"{ref_scheme}_assignment_id": f"{ls_scheme}_{ref_scheme}_assignment_id"
-                })
+        merging_df_grp = (
+            merging_df.groupby([ref_scheme])
+            .agg(
+                {
+                    "Pload (MW)": "sum",
+                    ls_scheme: lambda x: ", ".join(x.astype(str).unique()),
+                    "assignment_id": lambda x: ", ".join(x.astype(str).unique()),
+                    "local_trip_id": lambda x: ", ".join(x.astype(str).unique()),
+                    f"{ref_scheme}_assignment_id": lambda x: ", ".join(
+                        x.astype(str).unique()
+                    ),
+                }
             )
+            .reset_index()
+        )
+        ls_scheme_col_rename = f"{ls_scheme} (MW)"
+        merging_df_grp.rename(
+            columns={
+                "Pload (MW)": ls_scheme_col_rename,
+                "local_trip_id": f"{ls_scheme}_local_trip_id",
+                f"{ref_scheme}_assignment_id": f"{ls_scheme}_{ref_scheme}_assignment_id",
+            },
+            inplace=True,
+        )
 
-            clean_ref_ls_mw = pd.merge(
-                clean_ref_ls_mw,
-                merging_df_grp,
-                on=ref_scheme,
-                how="left"
-            )
+        clean_ref_ls_mw = pd.merge(
+            clean_ref_ls_mw, merging_df_grp, on=ref_scheme, how="left"
+        )
 
-    # df_melted = clean_ref_ls_mw.melt(
-    #     id_vars=[ref_scheme],
-    #     value_vars=["Critical Load", "Non-critical Load", ],
-    #     var_name="Type",
-    #     value_name="Quantum (MW)"
-    # )
-    # df_melted = scheme_col_sorted(df_melted, scheme)
+        clean_ref_ls_mw[balanced_col_name] = np.maximum(
+            0,
+            clean_ref_ls_mw[balanced_col_name]
+            - clean_ref_ls_mw[ls_scheme_col_rename].fillna(0),
+        )
 
-    st.dataframe(clean_ref_ls_mw)
+        scheme_mw_col.append(ls_scheme_col_rename)
 
-    st.markdown(
-        f"<p style='margin-top:30px; font-size:14px; font-weight: 700; font-family: Arial'>Load Shedding Subset Bar</p>",
-        unsafe_allow_html=True,
+    # st.dataframe(clean_ref_ls_mw)
+
+    df_melted = clean_ref_ls_mw[
+        [ref_scheme] + scheme_mw_col
+    ].melt(
+        id_vars=[ref_scheme],
+        value_vars=scheme_mw_col,
+        var_name="scheme",
+        value_name="Quantum (MW)",
     )
 
-    # st.dataframe(ls_subset)
-    col1, col2, col3 = st.columns([2, 0.1, 2])
+    df_melted = scheme_col_sorted(df_melted, str(ref_scheme))
+    # st.dataframe(df_melted)
 
-    with col1:
-        bar_subset()
-    with col3:
-        circle_subset()
+    color = ["#DFE6E3", "#F06B33", "#E359A0"]
+    result = dict(zip(scheme_mw_col, color))
 
-
-def bar_subset():
-    st.markdown(
-        f"<p style='margin-top:30px; font-size:14px; font-weight: 700; font-family: Arial'>Load Shedding Subset </p>",
-        unsafe_allow_html=True,
+    fig_shed = px.bar(
+        df_melted,
+        x=ref_scheme,
+        y="Quantum (MW)",
+        color="scheme",
+        color_discrete_map=result,
+        title=f"{ref_scheme}",
     )
 
-
-def circle_subset():
-    st.markdown(
-        f"<p style='margin-top:30px; font-size:14px; font-weight: 700; font-family: Arial'>Load Shedding Subset </p>",
-        unsafe_allow_html=True,
+    fig_shed.update_layout(
+        title={"font": {"size": 18, "family": "Arial"}, "x": 0.5, "xanchor": "center"},
+        height=450,
+        width=600,
+        legend_title_text="",
+        xaxis_title=None,
+        yaxis_title="Load Shedding Quantum (MW)",
     )
+
+    st.plotly_chart(fig_shed, width="content")
