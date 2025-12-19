@@ -1,24 +1,22 @@
+import streamlit as st
 import pandas as pd
 
 
 def load_profile_metric(df, zone, scheme=None):
     df_filtered = df
-    if scheme is not None:
 
+    if scheme is not None:
         is_scheme_valid = (
             df[scheme].notna() & (df[scheme] != "nan") & (df[scheme] != "#na")
         )
         df_filtered = df[is_scheme_valid]
+
     zone_MW = df_filtered.groupby(
         ["zone"],
         as_index=False,
-    ).agg(
-        {
-            "Pload (MW)": "sum",
-            "Qload (Mvar)": "sum",
-        }
-    )
-    return zone_MW.loc[zone_MW["zone"] == zone]["Pload (MW)"].to_numpy().sum()
+    ).agg({"Load (MW)": "sum"}
+          )
+    return zone_MW.loc[zone_MW["zone"] == zone]["Load (MW)"].to_numpy().sum()
 
 
 def df_search_filter(df: pd.DataFrame, query: str) -> pd.DataFrame:

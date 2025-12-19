@@ -2,20 +2,16 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from applications.load_shedding.load_profile import (
-    load_profile_metric,
-    df_search_filter,
-)
+from applications.load_shedding.load_profile import df_search_filter
 
 
-def load_profile_data():
-    load_profile_dashboard()
+def loadprofile_main():
+    loadprofile_dashboard()
     st.divider()
-    load_profile_table_find_subs()
+    loadprofile_data()
 
-
-def load_profile_dashboard():
-    loadprofile = st.session_state["loadprofile"]    
+def loadprofile_dashboard():
+    loadprofile = st.session_state["loadprofile"]
     total_mw = loadprofile.totalMW()
     north_mw = loadprofile.regional_loadprofile("North")
     kvalley_mw = loadprofile.regional_loadprofile("KlangValley")
@@ -94,17 +90,17 @@ def load_profile_dashboard():
         st.plotly_chart(fig, width="stretch")
 
 
-def load_profile_table_find_subs():
+def loadprofile_data():
     show_table = st.checkbox("**Show Load Profile Data**", value=False)
     if show_table:
-        col1, col2, col3 = st.columns([2, 0.1, 1])
+        col1, _, col3 = st.columns([2, 0.1, 1])
         with col1:
-            load_profile_table()
+            loadprofile_table()
         with col3:
-            load_profile_identifier()
+            loadprofile_finder()
 
 
-def load_profile_table():
+def loadprofile_table():
     loadprofile = st.session_state["loadprofile"]
     load_df = loadprofile.df
 
@@ -130,70 +126,72 @@ def load_profile_table():
             rows_to_display = 0
         else:
             max_rows = len(filtered_df)
-            rows_to_display = st.slider(
-                "Select number of rows to display:",
-                min_value=1,
-                max_value=max_rows,
-                value=min(5, max_rows) if max_rows > 1 else 1,
-                step=1,
-                help=f"Currently filtering from {len(load_df)} total rows. {max_rows} rows match the search query.",
-            )
+
+            if max_rows <= 1:
+                rows_to_display = max_rows
+                if max_rows == 0:
+                    st.info("No data found matching your filters.")
+            else:
+                rows_to_display = st.slider(
+                    "Select number of rows to display:",
+                    min_value=1,
+                    max_value=max_rows,
+                    value=min(5, max_rows),
+                    step=1,
+                    help=f"Currently filtering from {len(load_df)} total rows. {max_rows} rows match the search query.",
+                    key="substation_load_slider"
+                )
 
     st.dataframe(filtered_df.head(rows_to_display),
                  width="stretch", hide_index=True)
 
 
-def load_profile_identifier():
-    loadprofile = st.session_state["loadprofile"]
-    load_df = loadprofile.df
+def loadprofile_finder():
 
     loadshedding = st.session_state["loadshedding"]
-    subs_metadata = loadshedding.subs_metadata_enrichment()
-    cols = ["Mnemonic", "substation_name", "Id", "Pload (MW)", "Qload (Mvar)"]
+    load_dp = loadshedding.load_dp()
 
-    load_profile_meta = pd.merge(
-        load_df,
-        subs_metadata,
-        left_on="Mnemonic",
-        right_on="mnemonic",
-        how="left"
-    )[cols]
+    cols = ["mnemonic", "substation_name",
+            "feeder_id", "Load (MW)", "zone", "gm_subzone"]
+    subs_load = load_dp[cols]
 
-    load_profile_subs = load_profile_meta.groupby(
+    load_profile_subs = subs_load.groupby(
         [
-            "Mnemonic",
+            "mnemonic",
             "substation_name",
         ],
         as_index=False,
         dropna=False
     ).agg(
         {
-            "Pload (MW)": "sum",
-            "Qload (Mvar)": "sum",
-            "Id": lambda x: ", ".join(x.astype(str).unique()),
+            "Load (MW)": "sum",
+            "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
         }
     )
+
     combined_name = (
-        load_profile_subs["Mnemonic"].str.cat(
+        load_profile_subs["mnemonic"].str.cat(
             load_profile_subs["substation_name"], sep=" (", na_rep=""
         )
         + ")"
     )
-    load_profile_subs["Substation Name"] = np.where(
+
+    load_profile_subs["substation_fullname"] = np.where(
         load_profile_subs["substation_name"].notna(),
         combined_name,
-        load_profile_subs["Mnemonic"],
+        load_profile_subs["mnemonic"],
     )
 
     st.markdown(
         f'<span style="color: inherit; font-size: 20px; font-weight: 600">2. Find Substation Load Profile</span>',
         unsafe_allow_html=True
     )
-    substation_list = load_profile_subs["Substation Name"].tolist()
+
+    substation_list = load_profile_subs["substation_fullname"].tolist()
     substation = st.selectbox(label="Substation Name", options=substation_list)
 
-    subs_loadMW = load_profile_subs.loc[load_profile_subs["Substation Name"]
-                                        == substation]["Pload (MW)"].values[0]
+    subs_loadMW = load_profile_subs.loc[load_profile_subs["substation_fullname"]
+                                        == substation]["Load (MW)"].values[0]
     st.metric(
         label=f"Total Demand for {substation}:",
         value=f"{subs_loadMW:.2f} MW"

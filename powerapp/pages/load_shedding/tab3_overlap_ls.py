@@ -5,7 +5,7 @@ import plotly.express as px
 from applications.load_shedding.load_profile import df_search_filter
 from applications.load_shedding.helper import (
     column_data_list, scheme_col_sorted)
-from pages.load_shedding.tab3_dashboard import critical_list_dashboard
+# from pages.load_shedding.tab3_dashboard import critical_list_dashboard
 
 
 def overlap_ls():
@@ -42,7 +42,9 @@ def overlap_ls():
             key="overlap_flaglist_scheme",
             default="UFLS",
         )
-        selected_ls_scheme = LS_SCHEME if ls_scheme == [] else ls_scheme
+        # selected_ls_scheme = LS_SCHEME if ls_scheme == [] else ls_scheme
+        selected_ls_scheme = ls_scheme
+
 
     with col3:
         ls_stage_options = ufls_setting.columns.tolist()
