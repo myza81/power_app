@@ -28,9 +28,9 @@ def debug():
     uvls_setting = loadshedding.uvls_setting
     subs_metadata = loadshedding.subs_meta
 
-    hv_pocket = loadshedding.hv_pocket
+ 
     delivery_point = loadshedding.delivery_point
-    hvcb_rly = loadshedding.rly_hvcb
+
 
     load_dp = loadshedding.load_dp()
     load_pocket = loadshedding.load_pocket()

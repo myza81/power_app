@@ -1,25 +1,38 @@
 import pandas as pd
-from applications.load_shedding.load_profile import (
-    load_profile_metric,
-    df_search_filter,
-)
+from typing import Dict, List
+from applications.load_shedding.load_profile import load_profile_metric
 
 
 class LoadProfile:
-    def __init__(self, load_profile):
-        self.loadprofile = load_profile
-        self.ZONE = {
-            "North": ["Kedah", "Perlis", "P Pinang", "Perak"],
-            "KlangValley": ["KL", "Selangor"],
-            "South": ["NS", "Johor", "Melaka"],
-            "East": ["Kelantan", "Terengganu", "Pahang"],
-        }
-        self.df = self.load_df()
+    STATE_MAPPING: Dict[str, str] = {
+        "LANGKAWI": "KEDAH",
+        "WPKL": "KL",
+        "TGANU": "TERENGGANU"
+    }
 
-    def load_df(self):
-        df = self.loadprofile.copy()
+    ZONE_STRUCTURE: Dict[str, List[str]] = {
+        "North": ["Kedah", "Perlis", "P Pinang", "Perak"],
+        "KlangValley": ["KL", "Selangor"],
+        "South": ["NS", "Johor", "Melaka"],
+        "East": ["Kelantan", "Terengganu", "Pahang"],
+    }
+
+    def __init__(self, load_profile: pd.DataFrame):
+        self.raw_load_profile = load_profile
+        self.zone_map = {
+            state.upper(): zone
+            for zone, states in self.ZONE_STRUCTURE.items()
+            for state in states
+        }
+        self.df = self._process_data()
+
+    def _process_data(self) -> pd.DataFrame:
+        """Internal helper to clean and structure the load profile data."""
+        df = self.raw_load_profile.copy()
         df.columns = df.columns.str.replace(' ', '')
-        df = df.drop(columns=["ZoneNum", "OwnerNum", "InService"])
+
+        df = df.drop(columns=["ZoneNum", "OwnerNum",
+                     "InService"], errors='ignore')
         df = df.rename(columns={
             "BusNumber": "bus_number",
             "BusName": "bus_name",
@@ -28,32 +41,21 @@ class LoadProfile:
             "ZoneName": "locality",
             "OwnerName": "owner",
             "Pload(MW)": "Load (MW)"
-
         })
 
-        state_name = {"LANGKAWI": "KEDAH", "WPKL": "KL", "TGANU": "TERENGGANU"}
-        df["locality"] = df["locality"].replace(state_name)
-        owner_name = {"TNB T": "Grid"}
-        df["owner"] = df["owner"].replace(owner_name)
+        df["locality"] = df["locality"].str.upper().replace(self.STATE_MAPPING)
+        df["owner"] = df["owner"].replace({"TNB T": "Grid"})
         df["feeder_id"] = df["feeder_id"].astype(str)
-
-        zone_state = {}
-        for zone, states in self.ZONE.items():
-            for state in states:
-                zone_state[state.upper()] = zone
-        df["zone"] = df["locality"].str.upper().map(zone_state)
+        df["zone"] = df["locality"].map(self.zone_map)
 
         return df
 
-    def totalMW(self):
-        load_df = self.load_df()
-        total_mw = load_df["Load (MW)"].sum()
+    def totalMW(self) -> int:
+        """Returns the total system load from the processed dataframe."""
+        return int(self.df["Load (MW)"].sum())
 
-        return int(total_mw)
-
-    def regional_loadprofile(self, zone):
-        regional_load = load_profile_metric(self.load_df(), zone)
+    def regional_loadprofile(self, zone: str) -> int:
+        """Returns the load for a specific region using the helper utility."""
+        regional_load = load_profile_metric(self.df, zone)
         return int(regional_load)
-    
-
 

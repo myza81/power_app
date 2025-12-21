@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from css.streamlit_css import vertical_center_css
+
 from applications.load_shedding.helper import scheme_col_sorted
 
 

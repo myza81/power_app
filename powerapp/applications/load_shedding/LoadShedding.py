@@ -92,10 +92,11 @@ class LoadShedding:
         self.delivery_point = read_ls_data(
             get_path("delivery_point.xlsx", filedir))
 
-        self.hv_pocket = read_ls_data(get_path("hv_pocket.xlsx", filedir))
+        self.pocket_assign = read_ls_data(
+            get_path("pocket_assign.xlsx", filedir))
 
-        # rly_hvcb.xlsx = UFLS & UVLS relay bay assignment installed for LPC and pocket
-        self.rly_hvcb = read_ls_data(get_path("rly_hvcb.xlsx", filedir))
+        # pocket_rly.xlsx = associted breakers where the pocket loads are disconnected
+        self.pocket_rly = read_ls_data(get_path("pocket_rly.xlsx", filedir))
 
         # rly_lvcb.xlsx = UFLS & UVLS relay bay assignment installed for incomer (LVCB)
         self.rly_incomer = read_ls_data(get_path("rly_incomer.xlsx", filedir))
@@ -134,24 +135,14 @@ class LoadShedding:
 
         return df_flaglist
 
-    def load_dp_quantum(self):
-        load_dp = self.load_dp()
-
-        if load_dp.empty:
-            return pd.DataFrame()
-
-        df = load_dp.groupby(
-            ["local_trip_id", "mnemonic"]
-        )
-
     def load_pocket(self) -> pd.DataFrame:
         load_dp = self.load_dp()
 
-        if self.hv_pocket is None or load_dp.empty:
+        if self.pocket_assign is None or load_dp.empty:
             return pd.DataFrame()
 
         df = pd.merge(
-            self.hv_pocket,
+            self.pocket_assign,
             load_dp,
             on="mnemonic",
             how="left"
@@ -179,6 +170,23 @@ class LoadShedding:
         choices = ["LPC", "Interconnector", "Local_Load", ""]
 
         df["dp_type"] = np.select(conditions, choices, default="Pocket")
+
+        return df
+
+    def pocket_relay(self):
+        if self.pocket_rly is None or self.subs_meta is None:
+            return pd.DataFrame()
+
+        df = pd.merge(
+            self.pocket_rly.astype(str),
+            self.subs_meta,
+            left_on="Mnemonic",
+            right_on="mnemonic",
+            how="left",
+        ).drop(columns=["mnemonic"])
+
+        df = df.rename(columns={
+                       "zone": "Zone", "gm_subzone": "Grid Maint. Subzone", "substation_name": "Substation"})
 
         return df
 
@@ -314,72 +322,72 @@ class LoadShedding:
 
         return df
 
-    def loadshedding_assignments_filter(
-        self, review_year: Optional[str] = None, scheme: Optional[list[str]] = None
-    ) -> pd.DataFrame:
-        """Combines UFLS, UVLS, or EMLS assignments into a single DataFrame - based on the selected schemes. It return a list of selected load shedding on a selected year of review with its associated load quantum i.e ['UFLS assignment', 'UVLS assignment', ...].
+    # def loadshedding_assignments_filter(
+    #     self, review_year: Optional[str] = None, scheme: Optional[list[str]] = None
+    # ) -> pd.DataFrame:
+    #     """Combines UFLS, UVLS, or EMLS assignments into a single DataFrame - based on the selected schemes. It return a list of selected load shedding on a selected year of review with its associated load quantum i.e ['UFLS assignment', 'UVLS assignment', ...].
 
-        If the review year is not found, it defaults to the latest year available in the data.
-        if no scheme is selected, it defaults to all schemes.
-        """
-        current_datetime = pd.to_datetime("now")
-        current_year = current_datetime.year
+    #     If the review year is not found, it defaults to the latest year available in the data.
+    #     if no scheme is selected, it defaults to all schemes.
+    #     """
+    #     current_datetime = pd.to_datetime("now")
+    #     current_year = current_datetime.year
 
-        if (
-            self.ufls_assignment is None
-            and self.uvls_assignment is None
-            and self.emls_assignment is None
-        ):
-            print("Warning: No load shedding assignments found.")
-            return pd.DataFrame()
+    #     if (
+    #         self.ufls_assignment is None
+    #         and self.uvls_assignment is None
+    #         and self.emls_assignment is None
+    #     ):
+    #         print("Warning: No load shedding assignments found.")
+    #         return pd.DataFrame()
 
-        if review_year is None:
-            review_year = str(current_year)
+    #     if review_year is None:
+    #         review_year = str(current_year)
 
-        if scheme is None or not scheme:
-            scheme = ["UFLS", "UVLS", "EMLS"]
+    #     if scheme is None or not scheme:
+    #         scheme = ["UFLS", "UVLS", "EMLS"]
 
-        assignments: Dict[str, pd.DataFrame] = {
-            "UFLS": ls_active(
-                self.ufls_assignment, review_year=review_year, scheme="UFLS"
-            ),
-            "UVLS": ls_active(
-                self.uvls_assignment, review_year=review_year, scheme="UVLS"
-            ),
-            "EMLS": ls_active(
-                self.emls_assignment, review_year=review_year, scheme="EMLS"
-            ),
-        }
+    #     assignments: Dict[str, pd.DataFrame] = {
+    #         "UFLS": ls_active(
+    #             self.ufls_assignment, review_year=review_year, scheme="UFLS"
+    #         ),
+    #         "UVLS": ls_active(
+    #             self.uvls_assignment, review_year=review_year, scheme="UVLS"
+    #         ),
+    #         "EMLS": ls_active(
+    #             self.emls_assignment, review_year=review_year, scheme="EMLS"
+    #         ),
+    #     }
 
-        selected_scheme_dfs: List[pd.DataFrame] = [
-            assignments[ls_scheme] for ls_scheme in scheme
-        ]
+    #     selected_scheme_dfs: List[pd.DataFrame] = [
+    #         assignments[ls_scheme] for ls_scheme in scheme
+    #     ]
 
-        if not selected_scheme_dfs:
-            print("Warning: No schemes selected or processed.")
-            return pd.DataFrame()
+    #     if not selected_scheme_dfs:
+    #         print("Warning: No schemes selected or processed.")
+    #         return pd.DataFrame()
 
-        if len(selected_scheme_dfs) > 1:
-            ls_merged = reduce(
-                lambda left, right: pd.merge(
-                    left, right, on="assignment_id", how="outer"
-                ),
-                selected_scheme_dfs,
-            )
-        else:
-            ls_merged = selected_scheme_dfs[0]
+    #     if len(selected_scheme_dfs) > 1:
+    #         ls_merged = reduce(
+    #             lambda left, right: pd.merge(
+    #                 left, right, on="assignment_id", how="outer"
+    #             ),
+    #             selected_scheme_dfs,
+    #         )
+    #     else:
+    #         ls_merged = selected_scheme_dfs[0]
 
-        ls_w_load = pd.DataFrame()
-        if not self.dp_grpId_loadquantum().empty:
-            ls_w_load = pd.merge(
-                ls_merged,
-                self.dp_grpId_loadquantum(),
-                left_on="assignment_id",
-                right_on="assignment_id",
-                how="left",
-            )
+    #     ls_w_load = pd.DataFrame()
+    #     if not self.dp_grpId_loadquantum().empty:
+    #         ls_w_load = pd.merge(
+    #             ls_merged,
+    #             self.dp_grpId_loadquantum(),
+    #             left_on="assignment_id",
+    #             right_on="assignment_id",
+    #             how="left",
+    #         )
 
-        return ls_w_load
+    #     return ls_w_load
 
     # def flaglist(self):
     #     """Combination of all substation that has been identified as critical list from DSO list & GSO critical list. The list refer to group_trip_id."""
@@ -397,84 +405,84 @@ class LoadShedding:
 
     #     return combined_flaglist
 
-    def automatic_loadshedding_rly(self):
-        """This list a combination of bay assignment (incomer and HVCB) that have been installed with load shedding relay. This list indicates how much the load quantum potentially can be assigned to be shed when the relay is activated."""
-        if (
-            self.dp_hvcb is None
-            or self.incomer_rly_loc is None
-            or self.dp_incomer is None
-        ):
-            return pd.DataFrame()
+    # def automatic_loadshedding_rly(self):
+    #     """This list a combination of bay assignment (incomer and HVCB) that have been installed with load shedding relay. This list indicates how much the load quantum potentially can be assigned to be shed when the relay is activated."""
+    #     if (
+    #         self.dp_hvcb is None
+    #         or self.incomer_rly_loc is None
+    #         or self.dp_incomer is None
+    #     ):
+    #         return pd.DataFrame()
 
-        required_columns = [
-            "local_trip_id",
-            "mnemonic",
-            "assignment_id",
-            "feeder_id",
-            "breaker_id",
-        ]
-        hvcb_dp = self.dp_hvcb.copy(deep=True)
-        hvcb_dp["assignment_id"] = hvcb_dp["group_trip_id"]
-        hvcb_rly = hvcb_dp.groupby(
-            ["group_trip_id", "mnemonic", "local_trip_id", "assignment_id"],
-            as_index=False,
-            dropna=False
-        ).agg(
-            {
-                "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
-                "breaker_id": lambda x: ", ".join(x.astype(str).unique()),
-            }
-        )[
-            required_columns
-        ]
+    #     required_columns = [
+    #         "local_trip_id",
+    #         "mnemonic",
+    #         "assignment_id",
+    #         "feeder_id",
+    #         "breaker_id",
+    #     ]
+    #     hvcb_dp = self.dp_hvcb.copy(deep=True)
+    #     hvcb_dp["assignment_id"] = hvcb_dp["group_trip_id"]
+    #     hvcb_rly = hvcb_dp.groupby(
+    #         ["group_trip_id", "mnemonic", "local_trip_id", "assignment_id"],
+    #         as_index=False,
+    #         dropna=False
+    #     ).agg(
+    #         {
+    #             "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
+    #             "breaker_id": lambda x: ", ".join(x.astype(str).unique()),
+    #         }
+    #     )[
+    #         required_columns
+    #     ]
 
-        incomer_relay = self.incomer_rly_loc.copy(deep=True)
-        incomer_relay["assignment_id"] = incomer_relay["local_trip_id"]
-        incomer_richment = pd.merge(
-            incomer_relay, self.dp_incomer, on="local_trip_id", how="left"
-        )
-        incomer_rly = incomer_richment.groupby(
-            ["local_trip_id", "assignment_id", "mnemonic", "kV"], as_index=False
-        ).agg(
-            {
-                "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
-                "breaker_id": lambda x: ", ".join(x.astype(str).unique()),
-            }
-        )[
-            required_columns
-        ]
+    #     incomer_relay = self.incomer_rly_loc.copy(deep=True)
+    #     incomer_relay["assignment_id"] = incomer_relay["local_trip_id"]
+    #     incomer_richment = pd.merge(
+    #         incomer_relay, self.dp_incomer, on="local_trip_id", how="left"
+    #     )
+    #     incomer_rly = incomer_richment.groupby(
+    #         ["local_trip_id", "assignment_id", "mnemonic", "kV"], as_index=False
+    #     ).agg(
+    #         {
+    #             "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
+    #             "breaker_id": lambda x: ", ".join(x.astype(str).unique()),
+    #         }
+    #     )[
+    #         required_columns
+    #     ]
 
-        available_rly = pd.concat([hvcb_rly, incomer_rly], ignore_index=True)
+    #     available_rly = pd.concat([hvcb_rly, incomer_rly], ignore_index=True)
 
-        available_rly_with_load = pd.merge(
-            available_rly,
-            self.dp_grpId_loadquantum(),
-            on=[
-                "mnemonic",
-                "local_trip_id",
-                "assignment_id",
-                "feeder_id",
-                "breaker_id",
-            ],
-            how="left",
-        )
+    #     available_rly_with_load = pd.merge(
+    #         available_rly,
+    #         self.dp_grpId_loadquantum(),
+    #         on=[
+    #             "mnemonic",
+    #             "local_trip_id",
+    #             "assignment_id",
+    #             "feeder_id",
+    #             "breaker_id",
+    #         ],
+    #         how="left",
+    #     )
 
-        return available_rly_with_load
+    #     return available_rly_with_load
 
-    def available_potential_quantum(self) -> float:
-        """Calculates the total available potential load quantum (in MW) that can be shed based on the automatic load shedding relay assignments."""
-        available_assignment = self.automatic_loadshedding_rly()
+    # def available_potential_quantum(self) -> float:
+    #     """Calculates the total available potential load quantum (in MW) that can be shed based on the automatic load shedding relay assignments."""
+    #     available_assignment = self.automatic_loadshedding_rly()
 
-        if available_assignment.empty:
-            return 0.0
+    #     if available_assignment.empty:
+    #         return 0.0
 
-        remove_duplicate = available_assignment.drop_duplicates(
-            subset=["local_trip_id", "mnemonic"], keep="first"
-        )
+    #     remove_duplicate = available_assignment.drop_duplicates(
+    #         subset=["local_trip_id", "mnemonic"], keep="first"
+    #     )
 
-        total_potential_mw = remove_duplicate["Pload (MW)"].sum()
+    #     total_potential_mw = remove_duplicate["Pload (MW)"].sum()
 
-        return total_potential_mw
+    #     return total_potential_mw
 
     def filtered_data(self, filters: Dict, df: pd.DataFrame) -> pd.DataFrame:
         """Applies filtering on the loadshedding assignments based on the provided filter criteria in the 'filters' dictionary. It merges the load shedding assignments with the substation metadata for enriched filtering."""

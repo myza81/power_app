@@ -17,10 +17,10 @@ from pages.load_shedding.helper import display_ls_metrics, show_temporary_messag
 
 
 def loadshedding_assignment() -> None:
-    # loadprofile = st.session_state["loadprofile"]
-    # load_df = loadprofile.df
+    loadprofile = st.session_state["loadprofile"]
 
     loadshedding = st.session_state["loadshedding"]
+    load_df = loadshedding.load_profile
 
     ufls_assignment = loadshedding.ufls_assignment
     uvls_assignment = loadshedding.uvls_assignment
@@ -29,11 +29,10 @@ def loadshedding_assignment() -> None:
     ufls_setting = loadshedding.ufls_setting
     uvls_setting = loadshedding.uvls_setting
     subs_metadata = loadshedding.subs_meta
-    # zone_mapping = loadshedding.zone_mapping
-    # loadshedding_dp = loadshedding.merged_dp()
-    hvcb_rly = loadshedding.rly_hvcb
+
+    pocket_relay = loadshedding.pocket_relay()
     masterlist_ls = loadshedding.ls_assignment_masterlist()
-    # assignment = loadshedding.assignment_loadquantum()
+
     LS_SCHEME = loadshedding.LOADSHED_SCHEME
 
     st.subheader("Load Sheddding Assignment")
@@ -60,7 +59,6 @@ def loadshedding_assignment() -> None:
             ls_scheme = st.multiselect(
                 label="Scheme", options=LS_SCHEME, default="UFLS"
             )
-            # selected_ls_scheme = LS_SCHEME if ls_scheme == [] else ls_scheme
             scheme = ls_scheme
 
         with col3:
@@ -108,8 +106,6 @@ def loadshedding_assignment() -> None:
 
         filtered_data = loadshedding.filtered_data(
             filters=filters, df=masterlist_ls)
-        
-        st.dataframe(filtered_data)
 
         if not filtered_data.empty:
 
@@ -123,326 +119,298 @@ def loadshedding_assignment() -> None:
             available_scheme_set = set(selected_inp_scheme).intersection(
                 set(filtered_data.columns)
             )
+            available_scheme_list = list(available_scheme_set)
 
+            searched_df = pd.DataFrame()
             with col7:
                 search_query = st.text_input(
                     label="Search for a Keyword:",
                     placeholder="Enter your search keyword here...",
                     key="active_ls_search_box",
                 )
-                filtered_df = df_search_filter(filtered_data, search_query)
-            
-            
+                searched_df = df_search_filter(filtered_data, search_query)
 
-            ls_cols = [
-                col
-                for col in filtered_df.columns
-                if any(keyword in col for keyword in LS_SCHEME)
-            ]
+            if not searched_df.empty:
 
-            # add with hv relay loc
-            hvcb_rly["kV"] = hvcb_rly["kV"].astype(str)
-            hvcb_rly = hvcb_rly.rename(
-                columns={
-                    "breaker_id": "Breaker(s)",
-                    "feeder_id": "Feeder Assignment",
-                    "mnemonic": "Mnemonic",
-                    "kV": "Voltage Level",
-                }
-            )
+                # st.dataframe(pocket_relay)
 
-            merge_rly_loc = pd.merge(
-                filtered_df,
-                hvcb_rly,
-                on="assignment_id",
-                how="left",
-            )
+                df_rly = pd.merge(
+                    searched_df,
+                    pocket_relay,
+                    on="assignment_id",
+                    how="left",
+                    # suffixes=('', '_right')
+                )
+                
 
-            
+                df_rly["Regional Zone"] = df_rly["zone"]
 
-            merge_rly_loc["Mnemonic"] = merge_rly_loc["Mnemonic"].fillna(
-                merge_rly_loc["mnemonic"]
-            )
+                df_rly["Grid Maint. Subzone"] = df_rly["Grid Maint. Subzone"].fillna(
+                    df_rly["gm_subzone"]
+                )
 
-            merge_rly_loc["Voltage Level"] = merge_rly_loc["Voltage Level"].fillna(
-                merge_rly_loc["kV"]
-            )
+                df_rly["Mnemonic"] = df_rly["Mnemonic"].fillna(
+                    df_rly["mnemonic"]
+                )
 
-            merge_rly_loc["Breaker(s)"] = merge_rly_loc["Breaker(s)"].fillna(
-                merge_rly_loc["breaker_id"]
-            )
+                df_rly["Substation"] = df_rly["Substation"].fillna(
+                    df_rly["substation_name"]
+                )
 
-            merge_rly_loc["Feeder Assignment"] = merge_rly_loc[
-                "Feeder Assignment"
-            ].fillna(merge_rly_loc["feeder_id"])
+                df_rly["Voltage Level"] = df_rly["Voltage Level"].fillna(
+                    df_rly["kV"]
+                )
 
-            column_order = ls_cols + [
-                "Mnemonic",
-                "Voltage Level",
-                "Breaker(s)",
-                "Feeder Assignment",
-                "assignment_id",
-                "dp_type",
-            ]
+                st.dataframe(df_rly)
 
-            merge_rly_loc = merge_rly_loc[column_order]
+                df_rly["Breaker(s)"] = df_rly["Breaker(s)"].fillna(
+                    df_rly["breaker_id"]
+                )
 
-            st.dataframe(merge_rly_loc)
-            
-            # merge_rly_meta = pd.merge(
-            #     merge_rly_loc,
-            #     subs_metadata,
-            #     left_on="Mnemonic",
-            #     right_on="mnemonic",
-            #     how="left",
-            # )[
-            #     merge_rly_loc.columns.tolist()
-            #     + ["zone", "gm_subzone", "substation_name"]
-            # ]
+                df_rly["Feeder Assignment"] = df_rly[
+                    "Feeder Assignment"
+                ].fillna(df_rly["feeder_id"])
 
-        #     grp_df = merge_rly_meta.groupby(
-        #         ls_cols
-        #         + [
-        #             "substation_name",
-        #             "Mnemonic",
-        #             "Voltage Level",
-        #             "assignment_id",
-        #             "ls_dp",
-        #         ],
-        #         as_index=False,
-        #         dropna=False,
-        #     ).agg(
-        #         {
-        #             "zone": lambda x: ", ".join(x.astype(str).unique()),
-        #             "gm_subzone": lambda x: ", ".join(x.astype(str).unique()),
-        #             "Breaker(s)": lambda x: ", ".join(x.astype(str).unique()),
-        #             "Feeder Assignment": lambda x: ", ".join(x.astype(str).unique()),
-        #         }
-        #     )
+                df_grp = df_rly.groupby(
+                    available_scheme_list
+                    + [
+                        "Substation",
+                        "Mnemonic",
+                        "Voltage Level",
+                        "assignment_id",
+                        "dp_type",
+                    ],
+                    as_index=False,
+                    dropna=False,
+                ).agg(
+                    {
+                        "Regional Zone": lambda x: ", ".join(x.astype(str).unique()),
+                        "Grid Maint. Subzone": lambda x: ", ".join(x.astype(str).unique()),
+                        "Breaker(s)": lambda x: ", ".join(x.astype(str).unique()),
+                        "Feeder Assignment": lambda x: ", ".join(x.astype(str).unique()),
+                    }
+                )
 
-        #     grp_df = grp_df.rename(
-        #         columns={
-        #             "zone": "Regional Zone",
-        #             "gm_subzone": "Grid Maint. Subzone",
-        #             "substation_name": "Substation",
-        #             "ls_dp": "Type",
-        #         }
-        #     )
+                sorted_df = scheme_col_sorted(
+                    df_grp,
+                    available_scheme_set,
+                    ["assignment_id", "Regional Zone", "Grid Maint. Subzone"],
+                )
 
-        #     sorted_df = scheme_col_sorted(
-        #         grp_df,
-        #         available_scheme_set,
-        #         ["assignment_id", "Regional Zone", "Grid Maint. Subzone"],
-        #     )
+                column_order = available_scheme_list + [
+                    "Regional Zone",
+                    "Grid Maint. Subzone",
+                    "Mnemonic",
+                    "Substation",
+                    "Voltage Level",
+                    "Breaker(s)",
+                    "Feeder Assignment",
+                    "assignment_id",
+                    "dp_type",
+                ]
 
-        #     columns_order = ls_cols + [
-        #         "Regional Zone",
-        #         "Grid Maint. Subzone",
-        #         "Substation",
-        #         "Mnemonic",
-        #         "Voltage Level",
-        #         "Breaker(s)",
-        #         "Feeder Assignment",
-        #         "Type",
-        #         "assignment_id",
-        #     ]
+                df_final_display = sorted_df.reindex(columns=column_order)
 
-        #     df_final_display = sorted_df.reindex(columns=columns_order)
+                st.dataframe(df_final_display,
+                             width="stretch", hide_index=True)
 
-        #     st.dataframe(df_final_display, width="stretch", hide_index=True)
+            col10, col11, col12, col13, col14 = st.columns(
+                [1.8, 1.5, 0.1, 2, 2])
 
-        #     col10, col11, col12, col13, col14 = st.columns([1.8, 1.5, 0.1, 2, 2])
+            with col10:
+                ls_name = [ls for ls in available_scheme_set]
+                combine_ls_name = "_".join(ls_name)
+                today = date.today()
+                default_filename = (
+                    f"{combine_ls_name}_downloadOn_{today.strftime("%d%m%Y")}"
+                )
 
-        #     with col10:
-        #         ls_name = [ls for ls in available_scheme_set]
-        #         combine_ls_name = "_".join(ls_name)
-        #         today = date.today()
-        #         default_filename = (
-        #             f"{combine_ls_name}_downloadOn_{today.strftime("%d%m%Y")}"
-        #         )
+                filename = st.text_input(
+                    label="Enter filename: ",
+                    value=default_filename,
+                    key="export_filename",
+                )
 
-        #         filename = st.text_input(
-        #             label="Enter filename: ",
-        #             value=default_filename,
-        #             key="export_filename",
-        #         )
+            with col11:
+                st.markdown("<br>", unsafe_allow_html=True)
+                excel_data = export_to_excel(df_final_display)
+                export_btn = st.download_button(
+                    label="Export to Excel File",
+                    data=excel_data,
+                    file_name=f"{filename}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="export_button",
+                )
 
-        #     with col11:
-        #         st.markdown("<br>", unsafe_allow_html=True)
-        #         excel_data = export_to_excel(df_final_display)
-        #         export_btn = st.download_button(
-        #             label="Export to Excel File",
-        #             data=excel_data,
-        #             file_name=f"{filename}.xlsx",
-        #             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        #             key="export_button",
-        #         )
+            if export_btn:
+                show_temporary_message(
+                    message_type="info",
+                    message=f"File will be saved as **{filename}** to your browser's downloads folder.",
+                    duration=3,
+                )
 
-        #     if export_btn:
-        #         show_temporary_message(
-        #             message_type="info",
-        #             message=f"File will be saved as **{filename}** to your browser's downloads folder.",
-        #             duration=3,
-        #         )
+            for ls_sch in available_scheme_set:
+                col15, col16, col17, col18, col19 = st.columns(
+                    [2, 0.1, 2, 0.1, 2])
 
-        #     for ls_sch in available_scheme_set:
-        #         col15, col16, col17, col18, col19 = st.columns([2, 0.1, 2, 0.1, 2])
+                filtered_data[ls_sch] = filtered_data[ls_sch].replace(
+                    "nan", np.nan)
 
-        #         filtered_data[ls_sch] = filtered_data[ls_sch].replace("nan", np.nan)
+                zone_ls = (
+                    filtered_data[[ls_sch, "zone", "Load (MW)"]]
+                    .groupby(["zone", ls_sch], as_index=False)
+                    .agg({"Load (MW)": "sum"})
+                )
 
-        #         zone_ls = (
-        #             filtered_data[[ls_sch, "zone", "Pload (MW)"]]
-        #             .groupby(["zone", ls_sch], as_index=False)
-        #             .agg({"Pload (MW)": "sum"})
-        #         )
+                load_df_grp = (
+                    load_df[["zone", "Load (MW)"]]
+                    .groupby(
+                        ["zone"],
+                        as_index=False,
+                    )
+                    .agg({"Load (MW)": "sum"})
+                )
 
-        #         load_df_grp = (
-        #             load_df[["zone", "Pload (MW)"]]
-        #             .groupby(
-        #                 ["zone"],
-        #                 as_index=False,
-        #             )
-        #             .agg({"Pload (MW)": "sum"})
-        #         )
+                with col15:
 
-        #         with col15:
+                    st.markdown(
+                        f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{ls_sch} Assignment - Filtered by Regional Zone</p>",
+                        unsafe_allow_html=True,
+                    )
+                    fig = px.pie(
+                        zone_ls,
+                        values="Load (MW)",
+                        names="zone",
+                        title=" ",
+                    )
+                    fig.update_traces(
+                        hole=0.5,
+                        hoverinfo="label+percent+value",
+                        # textinfo='value+percent+label',
+                        texttemplate="<b>%{label}</b><br>"
+                        + "%{value:,.0f} MW"
+                        + " (%{percent})",
+                        textfont_size=12,
+                        textposition="auto",
+                    )
+                    fig.update_layout(
+                        title=dict(
+                            font=dict(size=15),
+                            y=0.5,
+                            x=0.5,
+                            xanchor="center",
+                            xref="paper",
+                        ),
+                        showlegend=False,
+                        height=230,
+                        width=250,
+                        margin=dict(t=20, b=40, l=3, r=3),
+                        annotations=[
+                            dict(
+                                text=f"{zone_ls["Load (MW)"].sum():,.0f} MW",
+                                x=0.5,
+                                y=0.5,
+                                font_size=20,
+                                showarrow=False,
+                                align="center",
+                            )
+                        ],
+                    )
 
-        #             st.markdown(
-        #                 f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{ls_sch} Assignment - Filtered by Regional Zone</p>",
-        #                 unsafe_allow_html=True,
-        #             )
-        #             fig = px.pie(
-        #                 zone_ls,
-        #                 values="Pload (MW)",
-        #                 names="zone",
-        #                 title=" ",
-        #             )
-        #             fig.update_traces(
-        #                 hole=0.5,
-        #                 hoverinfo="label+percent+value",
-        #                 # textinfo='value+percent+label',
-        #                 texttemplate="<b>%{label}</b><br>"
-        #                 + "%{value:,.0f} MW"
-        #                 + " (%{percent})",
-        #                 textfont_size=12,
-        #                 textposition="auto",
-        #             )
-        #             fig.update_layout(
-        #                 title=dict(
-        #                     font=dict(size=15),
-        #                     y=0.5,
-        #                     x=0.5,
-        #                     xanchor="center",
-        #                     xref="paper",
-        #                 ),
-        #                 showlegend=False,
-        #                 height=230,
-        #                 width=250,
-        #                 margin=dict(t=20, b=40, l=3, r=3),
-        #                 annotations=[
-        #                     dict(
-        #                         text=f"{zone_ls["Pload (MW)"].sum():,.0f} MW",
-        #                         x=0.5,
-        #                         y=0.5,
-        #                         font_size=20,
-        #                         showarrow=False,
-        #                         align="center",
-        #                     )
-        #                 ],
-        #             )
+                    st.plotly_chart(
+                        fig, width="stretch", key=f"{ls_sch}_filtered_region"
+                    )
 
-        #             st.plotly_chart(
-        #                 fig, width="stretch", key=f"{ls_sch}_filtered_region"
-        #             )
+                with col17:
+                    total_quantum = load_df_grp["Load (MW)"].sum()
+                    total_quantum_zone = zone_ls["Load (MW)"].sum()
+                    ls_pct = (total_quantum_zone / total_quantum) * 100
 
-        #         with col17:
-        #             total_quantum = load_df_grp["Pload (MW)"].sum()
-        #             total_quantum_zone = zone_ls["Pload (MW)"].sum()
-        #             ls_pct = (total_quantum_zone / total_quantum) * 100
+                    st.markdown(
+                        f"<p style='margin-top:28px; display: flex, align-item: center, justify-content: center'><span style='color:inherit; font-size:20px; font-weight: 600'>Total Load Shed Quantum:</span><br> <span style='font-size:22px; font-weight: 600'>{total_quantum_zone:,.0f} MW ({ls_pct:,.1f}%)</span></p>",
+                        unsafe_allow_html=True,
+                    )
 
-        #             st.markdown(
-        #                 f"<p style='margin-top:28px; display: flex, align-item: center, justify-content: center'><span style='color:inherit; font-size:20px; font-weight: 600'>Total Load Shed Quantum:</span><br> <span style='font-size:22px; font-weight: 600'>{total_quantum_zone:,.0f} MW ({ls_pct:,.1f}%)</span></p>",
-        #                 unsafe_allow_html=True,
-        #             )
+                    zone_grp = zone_ls.groupby("zone", as_index=False).agg(
+                        {
+                            "Load (MW)": "sum",
+                            ls_sch: lambda x: ", ".join(x.astype(str).unique()),
+                        }
+                    )
+                    zone_list = zone_grp["zone"]
 
-        #             zone_grp = zone_ls.groupby("zone", as_index=False).agg(
-        #                 {
-        #                     "Pload (MW)": "sum",
-        #                     ls_sch: lambda x: ", ".join(x.astype(str).unique()),
-        #                 }
-        #             )
-        #             zone_list = zone_grp["zone"]
+                    for zone in zone_list:
+                        zone_load = loadprofile.regional_loadprofile(zone)
 
-        #             for zone in zone_list:
-        #                 zone_load = loadprofile.regional_loadprofile(zone)
+                        zone_ls_quantum = zone_grp.loc[zone_grp["zone"] == zone][
+                            "Load (MW)"
+                        ].values[0]
 
-        #                 zone_ls_quantum = zone_grp.loc[zone_grp["zone"] == zone][
-        #                     "Pload (MW)"
-        #                 ].values[0]
+                        zone_ls_pct = zone_ls_quantum / zone_load * 100
 
-        #                 zone_ls_pct = zone_ls_quantum / zone_load * 100
+                        st.markdown(
+                            f"<p style='margin-top:-10px; font-size:14px;'>Quantum Contribution from {zone}:</p>",
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown(
+                            f"<p style='margin-top:-20px; color:#2E86C1; font-size:22px; font-weight: 600'>{zone_ls_quantum:,.0f} MW ({zone_ls_pct:,.1f}%)</p>",
+                            unsafe_allow_html=True,
+                        )
 
-        #                 st.markdown(
-        #                     f"<p style='margin-top:-10px; font-size:14px;'>Quantum Contribution from {zone}:</p>",
-        #                     unsafe_allow_html=True,
-        #                 )
-        #                 st.markdown(
-        #                     f"<p style='margin-top:-20px; color:#2E86C1; font-size:22px; font-weight: 600'>{zone_ls_quantum:,.0f} MW ({zone_ls_pct:,.1f}%)</p>",
-        #                     unsafe_allow_html=True,
-        #                 )
+                with col19:
+                    filtered_data[ls_sch] = filtered_data[ls_sch].replace(
+                        "nan", np.nan)
+                    ls_dp = (
+                        filtered_data[[ls_sch, "dp_type", "Load (MW)"]]
+                        .groupby(["dp_type", ls_sch], as_index=False)
+                        .agg({"Load (MW)": "sum"})
+                    )
 
-        #         with col19:
-        #             filtered_data[ls_sch] = filtered_data[ls_sch].replace("nan", np.nan)
-        #             ls_dp = (
-        #                 filtered_data[[ls_sch, "ls_dp", "Pload (MW)"]]
-        #                 .groupby(["ls_dp", ls_sch], as_index=False)
-        #                 .agg({"Pload (MW)": "sum"})
-        #             )
+                    st.markdown(
+                        f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{ls_sch} Assignment - Filtered by Load Type</p>",
+                        unsafe_allow_html=True,
+                    )
+                    fig = px.pie(
+                        ls_dp,
+                        values="Load (MW)",
+                        names="dp_type",
+                        title=" ",
+                    )
+                    fig.update_traces(
+                        hole=0.5,
+                        hoverinfo="label+percent+value",
+                        texttemplate="<b>%{label}</b><br>"
+                        + "%{value:,.0f} MW"
+                        + " (%{percent})",
+                        textfont_size=12,
+                        textposition="auto",
+                    )
+                    fig.update_layout(
+                        title=dict(
+                            font=dict(size=15),
+                            y=0.5,
+                            x=0.5,
+                            xanchor="center",
+                            xref="paper",
+                        ),
+                        showlegend=False,
+                        height=230,
+                        width=250,
+                        margin=dict(t=30, b=40, l=3, r=3),
+                        annotations=[
+                            dict(
+                                text=f"{ls_dp["Load (MW)"].sum():,.0f} MW",
+                                x=0.5,
+                                y=0.5,
+                                font_size=20,
+                                showarrow=False,
+                                align="center",
+                            )
+                        ],
+                    )
 
-        #             st.markdown(
-        #                 f"<p style='margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial'>{ls_sch} Assignment - Filtered by Load Type</p>",
-        #                 unsafe_allow_html=True,
-        #             )
-        #             fig = px.pie(
-        #                 ls_dp,
-        #                 values="Pload (MW)",
-        #                 names="ls_dp",
-        #                 title=" ",
-        #             )
-        #             fig.update_traces(
-        #                 hole=0.5,
-        #                 hoverinfo="label+percent+value",
-        #                 texttemplate="<b>%{label}</b><br>"
-        #                 + "%{value:,.0f} MW"
-        #                 + " (%{percent})",
-        #                 textfont_size=12,
-        #                 textposition="auto",
-        #             )
-        #             fig.update_layout(
-        #                 title=dict(
-        #                     font=dict(size=15),
-        #                     y=0.5,
-        #                     x=0.5,
-        #                     xanchor="center",
-        #                     xref="paper",
-        #                 ),
-        #                 showlegend=False,
-        #                 height=230,
-        #                 width=250,
-        #                 margin=dict(t=20, b=40, l=3, r=3),
-        #                 annotations=[
-        #                     dict(
-        #                         text=f"{ls_dp["Pload (MW)"].sum():,.0f} MW",
-        #                         x=0.5,
-        #                         y=0.5,
-        #                         font_size=20,
-        #                         showarrow=False,
-        #                         align="center",
-        #                     )
-        #                 ],
-        #             )
-
-        #             st.plotly_chart(fig, width="stretch", key=f"{ls_sch}_filtered_dp")
+                    st.plotly_chart(fig, width="stretch",
+                                    key=f"{ls_sch}_filtered_dp")
 
             if missing_scheme:
                 for scheme in missing_scheme:

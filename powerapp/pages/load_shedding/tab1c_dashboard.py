@@ -3,7 +3,7 @@ from applications.load_shedding.helper import columns_list
 from pages.load_shedding.tab1c1_regional import regional_lshedding_stacked
 from pages.load_shedding.tab1c2_operating_stages import operating_stages_bar
 from pages.load_shedding.tab1c3_ls_analytics import lshedding_analytics
-from css.streamlit_css import vertical_center_css
+
 
 def ls_dashboard():
     loadshedding = st.session_state["loadshedding"]
