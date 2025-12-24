@@ -49,8 +49,7 @@ def loadshedding_masterlist(ls_df, scheme):
 def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
     ls_assignment = ls_df.copy() if ls_df is not None else pd.DataFrame()
 
-    review_year_list = columns_list(
-        ls_assignment, unwanted_el=["assignment_id"])
+    review_year_list = columns_list(ls_assignment, unwanted_el=["assignment_id"])
 
     latest_review = review_year
 
@@ -78,49 +77,68 @@ class LoadShedding:
     def __init__(self, load_df: pd.DataFrame, filedir: str = "data") -> None:
         self.load_profile = load_df
 
-        self.ufls_assignment = read_ls_data(
-            get_path("assignment_ufls.xlsx", filedir))
-        self.uvls_assignment = read_ls_data(
-            get_path("assignment_uvls.xlsx", filedir))
-        self.emls_assignment = read_ls_data(
-            get_path("assignment_emls.xlsx", filedir))
+        self.ufls_assignment = read_ls_data(get_path("assignment_ufls.xlsx", filedir))
+        self.uvls_assignment = read_ls_data(get_path("assignment_uvls.xlsx", filedir))
+        self.emls_assignment = read_ls_data(get_path("assignment_emls.xlsx", filedir))
 
         self.ufls_setting = pd.DataFrame(UFLS_SETTING)
         self.uvls_setting = pd.DataFrame(UVLS_SETTING)
 
         # delivery_point.xlsx = one-to-one mirror to load profile file to match load with assignment. to update reqularly as system updated
-        self.delivery_point = read_ls_data(
-            get_path("delivery_point.xlsx", filedir))
+        self.delivery_point = read_ls_data(get_path("delivery_point.xlsx", filedir))
 
-        self.pocket_assign = read_ls_data(
-            get_path("pocket_assign.xlsx", filedir))
+        self.pocket_assign = read_ls_data(get_path("pocket_assign.xlsx", filedir))
 
-        # pocket_rly.xlsx = associted breakers where the pocket loads are disconnected
-        self.pocket_rly = read_ls_data(get_path("pocket_rly.xlsx", filedir))
+        # rly_pocket.xlsx = associted breakers where the pocket loads are disconnected
+        self.rly_pocket = read_ls_data(get_path("rly_pocket.xlsx", filedir))
 
         # rly_lvcb.xlsx = UFLS & UVLS relay bay assignment installed for incomer (LVCB)
         self.rly_incomer = read_ls_data(get_path("rly_incomer.xlsx", filedir))
 
         self.flaglist = read_ls_data(get_path("flaglist.xlsx", filedir))
 
-        self.subs_meta = read_ls_data(get_path("subs_metadata.xlsx", filedir))
+        self.substations = read_ls_data(get_path("substations.xlsx", filedir))
 
         self.LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
 
+    def subs_meta(self):
+        self.zone_mapping = {
+            "North-Perda": "North",
+            "North-Ipoh": "North",
+            "North-Kedah_Perlis": "North",
+            "KL": "KlangValley",
+            "Selangor": "KlangValley",
+            "South-N9": "South",
+            "South-Melaka": "South",
+            "South-Kluang": "South",
+            "South-JB": "South",
+            "East-KB": "East",
+            "East-Dungun": "East",
+            "East-Kuantan": "East",
+        }
+        df = self.substations.copy()
+        df["zone"] = df["gm_subzone"].map(self.zone_mapping)
+
+        return df
+
     def load_dp(self) -> pd.DataFrame:
-        if self.delivery_point is None or self.load_profile is None or self.subs_meta is None:
+        if (
+            self.delivery_point is None
+            or self.load_profile is None
+            or self.subs_meta().empty
+        ):
             return pd.DataFrame()
 
         df = pd.merge(
             self.delivery_point,
-            self.load_profile,
+            self.load_profile[["mnemonic", "feeder_id", "Load (MW)"]],
             on=["mnemonic", "feeder_id"],
-            how="outer",
+            how="left",
         )
 
         df_meta = pd.merge(
             df,
-            self.subs_meta,
+            self.subs_meta(),
             on="mnemonic",
             how="left",
         )
@@ -141,12 +159,7 @@ class LoadShedding:
         if self.pocket_assign is None or load_dp.empty:
             return pd.DataFrame()
 
-        df = pd.merge(
-            self.pocket_assign,
-            load_dp,
-            on="mnemonic",
-            how="left"
-        )
+        df = pd.merge(self.pocket_assign, load_dp, on="mnemonic", how="left")
 
         return df
 
@@ -165,7 +178,7 @@ class LoadShedding:
             id_col.str.contains("132|275"),
             id_col.str.contains("230"),
             id_col.str.contains("11|22|33"),
-            id_col.str.contains("na")
+            id_col.str.contains("na"),
         ]
         choices = ["LPC", "Interconnector", "Local_Load", ""]
 
@@ -174,55 +187,60 @@ class LoadShedding:
         return df
 
     def pocket_relay(self):
-        if self.pocket_rly is None or self.subs_meta is None:
+        if self.rly_pocket is None or self.subs_meta().empty:
             return pd.DataFrame()
 
         df = pd.merge(
-            self.pocket_rly.astype(str),
-            self.subs_meta,
+            self.rly_pocket.astype(str),
+            self.subs_meta(),
             left_on="Mnemonic",
             right_on="mnemonic",
             how="left",
         ).drop(columns=["mnemonic"])
 
-        df = df.rename(columns={
-                       "zone": "Zone", "gm_subzone": "Grid Maint. Subzone", "substation_name": "Substation"})
+        df = df.rename(
+            columns={
+                "zone": "Zone",
+                "gm_subzone": "Subzone",
+                "substation_name": "Substation",
+            }
+        )
 
         return df
 
-    # def merged_dp(self) -> pd.DataFrame:
-    #     """This list is a combination of incomer Delivery Point and HVCB Delivery Point (pocket assignment) and generate with a common assignment_id. This list act as an interface to 'communicate' with load profile file to identify and to get the load quantum value (asscociated assignment_id with load profile id)."""
-    #     if self.dp_incomer is None or self.dp_hvcb is None:
-    #         return pd.DataFrame()
+        # def merged_dp(self) -> pd.DataFrame:
+        #     """This list is a combination of incomer Delivery Point and HVCB Delivery Point (pocket assignment) and generate with a common assignment_id. This list act as an interface to 'communicate' with load profile file to identify and to get the load quantum value (asscociated assignment_id with load profile id)."""
+        #     if self.dp_incomer is None or self.dp_hvcb is None:
+        #         return pd.DataFrame()
 
-    #     incomer_dp = self.dp_incomer.copy(deep=True)
-    #     incomer_dp["ls_dp"] = "Incomer"
+        #     incomer_dp = self.dp_incomer.copy(deep=True)
+        #     incomer_dp["ls_dp"] = "Incomer"
 
-    #     hvcb_dp = self.dp_hvcb.copy(deep=True)
-    #     hvcb_dp["ls_dp"] = hvcb_dp.apply(
-    #         lambda row: (
-    #             "LPC"
-    #             if "132" in row["group_trip_id"] or "275" in row["group_trip_id"]
-    #             else ("Interconnector" if "230" in row["group_trip_id"] else "Pocket")
-    #         ),
-    #         axis=1,
-    #     )
+        #     hvcb_dp = self.dp_hvcb.copy(deep=True)
+        #     hvcb_dp["ls_dp"] = hvcb_dp.apply(
+        #         lambda row: (
+        #             "LPC"
+        #             if "132" in row["group_trip_id"] or "275" in row["group_trip_id"]
+        #             else ("Interconnector" if "230" in row["group_trip_id"] else "Pocket")
+        #         ),
+        #         axis=1,
+        #     )
 
-    #     df_combined = pd.concat([incomer_dp, hvcb_dp], ignore_index=True)
-    #     df_combined["assignment_id"] = df_combined["group_trip_id"].fillna(
-    #         df_combined["local_trip_id"]
-    #     )
+        #     df_combined = pd.concat([incomer_dp, hvcb_dp], ignore_index=True)
+        #     df_combined["assignment_id"] = df_combined["group_trip_id"].fillna(
+        #         df_combined["local_trip_id"]
+        #     )
 
-    #     df_combined_meta = pd.merge(
-    #         df_combined,
-    #         self.subs_metadata_enrichment(),
-    #         on="mnemonic",
-    #         how="left",
-    #     )
+        #     df_combined_meta = pd.merge(
+        #         df_combined,
+        #         self.subs_metadata_enrichment(),
+        #         on="mnemonic",
+        #         how="left",
+        #     )
 
-    #     return df_combined_meta
+        #     return df_combined_meta
 
-    # def merged_dp_with_flaglist(self):
+        # def merged_dp_with_flaglist(self):
         """This list is a continuation of merged_dp along with the critical load flaglist."""
         # merged_dp = self.merged_dp()
 
@@ -304,14 +322,20 @@ class LoadShedding:
         uvls = loadshedding_masterlist(self.uvls_assignment, "UVLS")
         emls = loadshedding_masterlist(self.emls_assignment, "EMLS")
 
-        if ufls.empty or uvls.empty or emls.empty or self.assignment_loadquantum().empty:
+        if (
+            ufls.empty
+            or uvls.empty
+            or emls.empty
+            or self.assignment_loadquantum().empty
+        ):
             return pd.DataFrame()
 
         ls_masterlist = reduce(
-            lambda left, right: pd.merge(
-                left, right, on="assignment_id", how="outer"),
+            lambda left, right: pd.merge(left, right, on="assignment_id", how="outer"),
             [ufls, uvls, emls],
         )
+
+        ls_masterlist = ls_masterlist.replace(["nan", "#na"], np.nan)
 
         df = pd.merge(
             ls_masterlist,
@@ -510,11 +534,11 @@ class LoadShedding:
         drop_cols = [
             col
             for col in filtered_df.columns
-            if any(keyword in col for keyword in self.LOADSHED_SCHEME) and col not in available_scheme
+            if any(keyword in col for keyword in self.LOADSHED_SCHEME)
+            and col not in available_scheme
         ]
 
-        filtered_df = filtered_df.drop(
-            columns=drop_cols, axis=1, errors='ignore')
+        filtered_df = filtered_df.drop(columns=drop_cols, axis=1, errors="ignore")
 
         for ls_review in available_scheme:
             selected_ls_cols_dict[ls_review] = op_stage
@@ -534,9 +558,9 @@ class LoadShedding:
             return pd.DataFrame()
 
         available_scheme_list = list(available_scheme)
-        filtered_df[available_scheme_list] = filtered_df[available_scheme_list].replace([
-            'nan', '#na'], np.nan)
-        filtered_df = filtered_df.dropna(
-            subset=available_scheme_list, how='all')
+        filtered_df[available_scheme_list] = filtered_df[available_scheme_list].replace(
+            ["nan", "#na"], np.nan
+        )
+        filtered_df = filtered_df.dropna(subset=available_scheme_list, how="all")
 
         return filtered_df

@@ -3,8 +3,8 @@ from applications.data_processing.read_data import read_raw_data
 from applications.load_shedding.LoadShedding import LoadShedding
 from applications.load_shedding.LoadProfile import LoadProfile
 from pages.load_shedding.tab1a_loadprofile import loadprofile_main
-from pages.load_shedding.tab1b_assignment import loadshedding_assignment
-# from pages.load_shedding.tab1b_assignment1 import loadshedding_assignment
+# from pages.load_shedding.tab1b_assignment import loadshedding_assignment
+from pages.load_shedding.tab1b_assignment1 import loadshedding_assignment
 from pages.load_shedding.tab1c_dashboard import ls_dashboard
 from pages.load_shedding.tab2_reviewer import ls_reviewer
 from pages.load_shedding.tab3_critical_list import critical_list

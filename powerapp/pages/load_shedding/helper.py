@@ -110,3 +110,27 @@ def find_latest_assignment(data_list):
 
     latest_selection = [entry['full_name'] for entry in latest_entries.values()]
     return latest_selection
+
+
+def create_donut_chart(df: pd.DataFrame, names_col: str, title: str, key: str):
+    """Helper to generate standardized donut charts."""
+    total_mw = df["Load (MW)"].sum()
+    fig = px.pie(df, values="Load (MW)", names=names_col, hole=0.5)
+
+    fig.update_traces(
+        hoverinfo="label+percent+value",
+        texttemplate="<b>%{label}</b><br>%{value:,.0f} MW<br>(%{percent})",
+        textfont_size=10,
+        textposition="auto",
+    )
+    fig.update_layout(
+        showlegend=False,
+        height=250,
+        margin=dict(t=30, b=20, l=10, r=10),
+        annotations=[
+            dict(
+                text=f"{total_mw:,.0f} MW", x=0.5, y=0.5, font_size=18, showarrow=False
+            )
+        ],
+    )
+    st.plotly_chart(fig, width="content", key=key)

@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from applications.load_shedding.load_profile import df_search_filter
+from pages.load_shedding.helper import create_donut_chart
+from css.streamlit_css import custom_metric
 
 
 def loadprofile_main():
@@ -10,84 +12,30 @@ def loadprofile_main():
     st.divider()
     loadprofile_data()
 
+
 def loadprofile_dashboard():
     loadprofile = st.session_state["loadprofile"]
-    total_mw = loadprofile.totalMW()
-    north_mw = loadprofile.regional_loadprofile("North")
-    kvalley_mw = loadprofile.regional_loadprofile("KlangValley")
-    south_mw = loadprofile.regional_loadprofile("South")
-    east_mw = loadprofile.regional_loadprofile("East")
+    load_df = loadprofile.df
 
-    col1, col2, col3 = st.columns([2.0, 3.5, 2.5])
-    with col1:
-        st.metric(
-            label=f"Maximum Demand (MD)",
-            value=f"{total_mw:,} MW",
-        )
+    col_pie1, col_metrics = st.columns([2, 2])
 
-    with col2:
-        col2_1, col2_2 = st.columns(2)
-        with col2_1:
-            st.metric(
-                label="North Demand",
-                value=f"{north_mw:,} MW",
-            )
-            st.metric(
-                label="Klang Valley Demand",
-                value=f"{kvalley_mw:,} MW",
-            )
-        with col2_2:
-            st.metric(
-                label="South Demand",
-                value=f"{south_mw:,} MW",
-            )
-            st.metric(
-                label="East Demand",
-                value=f"{east_mw:,} MW",
-            )
+    with col_pie1:
+        zone_ls = load_df.groupby(["zone"], as_index=False)["Load (MW)"].sum()
+        create_donut_chart(zone_ls, "zone", "By Zone", f"pie_zone_grid_load_profile")
 
-    with col3:
-        data = {
-            'Regional': ["North", "KlangValley", "South", "East"],
-            "Load Demand": [north_mw, kvalley_mw, south_mw, east_mw]
-        }
-        df = pd.DataFrame(data)
-        fig = px.pie(
-            df,
-            values='Load Demand',
-            names='Regional',
-            title='Regional Load Demand Profile'
+    with col_metrics:
+        total_mw = loadprofile.totalMW()
+        custom_metric(
+            label="Maximum Demand (MD)",
+            value=f"{total_mw:,.0f} MW",
         )
-        fig.update_traces(
-            hole=.6,
-            hoverinfo="label+percent+value",
-            textinfo='percent+label',
-
-        )
-        fig.update_layout(
-            title=dict(
-                font=dict(size=15),
-                y=0.015,
-                x=0.5,
-                xanchor="center",
-                xref="paper",
-            ),
-            showlegend=False,
-            height=230,
-            width=250,
-            margin=dict(t=0, b=25, l=3, r=3),
-            annotations=[
-                dict(
-                    text=f"{total_mw:,} MW",
-                    x=0.5,
-                    y=0.5,
-                    font_size=20,
-                    showarrow=False,
-                    align="center",
-                )
-            ],
-        )
-        st.plotly_chart(fig, width="stretch")
+        st.markdown("")
+        for z in load_df["zone"].unique():
+            z_total = loadprofile.regional_loadprofile(z)
+            st.markdown(
+                f'<span style="color: inherit; font-size: 14px; font-weight: 400">{z} Demand: </span><span style="color: inherit; font-size: 18px; font-weight: 600">{z_total:,.0f} MW</span>',
+                unsafe_allow_html=True,
+            )
 
 
 def loadprofile_data():
@@ -106,7 +54,7 @@ def loadprofile_table():
 
     st.markdown(
         f'<span style="color: inherit; font-size: 20px; font-weight: 600">1. Load Profile Data Table</span>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
     col1, col2 = st.columns(2)
 
@@ -120,8 +68,7 @@ def loadprofile_table():
     with col2:
         filtered_df = df_search_filter(load_df, search_query)
         if filtered_df.empty and search_query:
-            st.warning(
-                f"No results found for the query: **'{search_query}'**")
+            st.warning(f"No results found for the query: **'{search_query}'**")
             max_rows = 0
             rows_to_display = 0
         else:
@@ -139,20 +86,28 @@ def loadprofile_table():
                     value=min(5, max_rows),
                     step=1,
                     help=f"Currently filtering from {len(load_df)} total rows. {max_rows} rows match the search query.",
-                    key="substation_load_slider"
+                    key="substation_load_slider",
                 )
 
-    st.dataframe(filtered_df.head(rows_to_display),
-                 width="stretch", hide_index=True)
+    st.dataframe(filtered_df.head(rows_to_display), width="stretch", hide_index=True)
 
 
 def loadprofile_finder():
 
+    loadprofile = st.session_state["loadprofile"]
+    load_df = loadprofile.df
+
     loadshedding = st.session_state["loadshedding"]
     load_dp = loadshedding.load_dp()
 
-    cols = ["mnemonic", "substation_name",
-            "feeder_id", "Load (MW)", "zone", "gm_subzone"]
+    cols = [
+        "mnemonic",
+        "substation_name",
+        "feeder_id",
+        "Load (MW)",
+        "zone",
+        "gm_subzone",
+    ]
     subs_load = load_dp[cols]
 
     load_profile_subs = subs_load.groupby(
@@ -161,7 +116,7 @@ def loadprofile_finder():
             "substation_name",
         ],
         as_index=False,
-        dropna=False
+        dropna=False,
     ).agg(
         {
             "Load (MW)": "sum",
@@ -184,15 +139,13 @@ def loadprofile_finder():
 
     st.markdown(
         f'<span style="color: inherit; font-size: 20px; font-weight: 600">2. Find Substation Load Profile</span>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     substation_list = load_profile_subs["substation_fullname"].tolist()
     substation = st.selectbox(label="Substation Name", options=substation_list)
 
-    subs_loadMW = load_profile_subs.loc[load_profile_subs["substation_fullname"]
-                                        == substation]["Load (MW)"].values[0]
-    st.metric(
-        label=f"Total Demand for {substation}:",
-        value=f"{subs_loadMW:.2f} MW"
-    )
+    subs_loadMW = load_profile_subs.loc[
+        load_profile_subs["substation_fullname"] == substation
+    ]["Load (MW)"].values[0]
+    st.metric(label=f"Total Demand for {substation}:", value=f"{subs_loadMW:.2f} MW")

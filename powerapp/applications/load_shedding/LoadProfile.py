@@ -38,15 +38,16 @@ class LoadProfile:
             "BusName": "bus_name",
             "Mnemonic": "mnemonic",
             "Id": "feeder_id",
-            "ZoneName": "locality",
+            "ZoneName": "state",
             "OwnerName": "owner",
             "Pload(MW)": "Load (MW)"
         })
 
-        df["locality"] = df["locality"].str.upper().replace(self.STATE_MAPPING)
+        df["state"] = df["state"].str.upper().replace(self.STATE_MAPPING)
         df["owner"] = df["owner"].replace({"TNB T": "Grid"})
         df["feeder_id"] = df["feeder_id"].astype(str)
-        df["zone"] = df["locality"].map(self.zone_map)
+        ## tukar guna substation list - substation.xlsx
+        df["zone"] = df["state"].map(self.zone_map)
 
         return df
 
