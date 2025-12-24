@@ -76,11 +76,20 @@ def loadshedding_assignment() -> None:
     subs_metadata = ls_obj.subs_meta()
     masterlist = ls_obj.ls_assignment_masterlist()
 
-    st.markdown("load_pocket")
+    # st.markdown("delivery_point")
+    # st.dataframe(ls_obj.delivery_point)
+
+    st.markdown("pocket_assign")
     st.dataframe(ls_obj.pocket_assign)
+
+    st.markdown("load_pocket")
+    st.dataframe(ls_obj.load_pocket())
 
     st.markdown("load_dp")
     st.dataframe(ls_obj.load_dp())
+
+    # st.markdown("assignment_loadquantum")
+    # st.dataframe(ls_obj.assignment_loadquantum())
 
     st.subheader("Load Shedding Assignment")
     if not st.checkbox("**Show Load Shedding Assignment List**", value=True):

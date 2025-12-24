@@ -46,6 +46,7 @@ def loadprofile_data():
             loadprofile_table()
         with col3:
             loadprofile_finder()
+            load_verifyer()
 
 
 def loadprofile_table():
@@ -94,9 +95,6 @@ def loadprofile_table():
 
 def loadprofile_finder():
 
-    loadprofile = st.session_state["loadprofile"]
-    load_df = loadprofile.df
-
     loadshedding = st.session_state["loadshedding"]
     load_dp = loadshedding.load_dp()
 
@@ -108,6 +106,7 @@ def loadprofile_finder():
         "zone",
         "gm_subzone",
     ]
+
     subs_load = load_dp[cols]
 
     load_profile_subs = subs_load.groupby(
@@ -149,3 +148,22 @@ def loadprofile_finder():
         load_profile_subs["substation_fullname"] == substation
     ]["Load (MW)"].values[0]
     st.metric(label=f"Total Demand for {substation}:", value=f"{subs_loadMW:.2f} MW")
+
+
+def load_verifyer():
+    loadshedding = st.session_state["loadshedding"]
+    load_dp = loadshedding.load_dp()
+
+    substations = load_dp["mnemonic"].unique()
+
+    subs = {
+        "Substation": [],
+        "MW":[]
+    }
+    for sub in substations:
+        subs_loadMW = load_dp.loc[load_dp["mnemonic"] == sub]["Load (MW)"].sum()
+        if subs_loadMW <= 0:
+            subs["Substation"].append(sub)
+            subs["MW"].append(subs_loadMW)
+
+    st.write(subs["Substation"])

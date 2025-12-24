@@ -129,8 +129,10 @@ class LoadShedding:
         ):
             return pd.DataFrame()
 
+        delivery_point = self.delivery_point.drop_duplicates()
+
         df = pd.merge(
-            self.delivery_point,
+            delivery_point,
             self.load_profile[["mnemonic", "feeder_id", "Load (MW)"]],
             on=["mnemonic", "feeder_id"],
             how="left",
@@ -159,7 +161,7 @@ class LoadShedding:
         if self.pocket_assign is None or load_dp.empty:
             return pd.DataFrame()
 
-        df = pd.merge(self.pocket_assign, load_dp, on="mnemonic", how="left")
+        df = pd.merge(self.pocket_assign, load_dp, on=["mnemonic", "kV"], how="left")
 
         return df
 
