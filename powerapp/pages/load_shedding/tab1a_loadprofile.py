@@ -39,14 +39,12 @@ def loadprofile_dashboard():
 
 
 def loadprofile_data():
-    show_table = st.checkbox("**Show Load Profile Data**", value=False)
-    if show_table:
-        col1, _, col3 = st.columns([2, 0.1, 1])
-        with col1:
-            loadprofile_table()
-        with col3:
-            loadprofile_finder()
-            load_verifyer()
+    col1, _, col3 = st.columns([2, 0.1, 1])
+    with col1:
+        loadprofile_table()
+    with col3:
+        loadprofile_finder()
+        # load_verifyer()
 
 
 def loadprofile_table():

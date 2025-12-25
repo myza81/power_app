@@ -3,13 +3,11 @@ from applications.data_processing.read_data import read_raw_data
 from applications.load_shedding.LoadShedding import LoadShedding
 from applications.load_shedding.LoadProfile import LoadProfile
 from pages.load_shedding.tab1a_loadprofile import loadprofile_main
-# from pages.load_shedding.tab1b_assignment import loadshedding_assignment
-from pages.load_shedding.tab1b_assignment1 import loadshedding_assignment
-from pages.load_shedding.tab1c_dashboard import ls_dashboard
+from pages.load_shedding.tab1b_assignment import loadshedding_assignment
+from pages.load_shedding.tab1c_analytics import ls_analytics
 from pages.load_shedding.tab2_reviewer import ls_reviewer
 from pages.load_shedding.tab3_critical_list import critical_list
 from pages.load_shedding.tab3_overlap_ls import overlap_ls
-# from pages.load_shedding.tab3_dashboard import critical_list_dashboard
 from pages.load_shedding.tab1d_ls_subset import loadshedding_subset
 from pages.load_shedding.tab4_debug import debug
 
@@ -35,27 +33,34 @@ if load_profile_uploader is not None:
     st.session_state["loadprofile"] = loadprofile
     st.session_state["loadshedding"] = LoadShedding(load_df=loadprofile.df)
 
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["Data Viewer", "Reviewer", "Critical Load List", "Debugging"]
-    )
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "Load Profile",
+        "Assignments",
+        "Analytics",
+        "Simulator",
+        "Critical Load List",
+        "Debugging"
+    ])
 
     with tab1:
         loadprofile_main()
         st.divider()
-        loadshedding_assignment()
-        # st.divider()
-        # ls_dashboard()
-        # st.divider()
-        # loadshedding_subset()
     with tab2:
-        # ls_reviewer()
+        loadshedding_assignment()
         st.divider()
     with tab3:
+        ls_analytics()
+        st.divider()
+        # loadshedding_subset()
+    with tab4:
+        # ls_reviewer()
+        st.divider()
+    with tab5:
         # critical_list()
         st.divider()
         # overlap_ls()
 
-    with tab4:
+    with tab6:
         debug()
 
 else:

@@ -1,105 +1,117 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
-
+from css.streamlit_css import custom_metric
+from applications.load_shedding.helper import scheme_col_sorted
+from pages.load_shedding.helper import create_donut_chart, create_stackedBar_chart, get_dynamic_colors, stage_sort
 
 
 def regional_lshedding_stacked(df, scheme):
+    # 1. Data Preparation & Aggregation
+    load_profile_obj = st.session_state["loadprofile"]
+    load_df_grp = load_profile_obj.df.groupby(
+        "zone").agg({"Load (MW)": "sum"}).reset_index()
 
-    loadprofile = st.session_state["loadprofile"]
-    load_df = loadprofile.df
-    load_df_grp = load_df[["zone", "Pload (MW)"]].groupby(
-        ["zone"],
-        as_index=False,
-    ).agg({"Pload (MW)": "sum"})
-
-    ls_operstage = df[[scheme, "zone", "Pload (MW)"]]
+    ls_operstage = df[[scheme, "zone", "Load (MW)"]]
     ls_operstage_grp = ls_operstage.groupby(
         [scheme, "zone"],
         as_index=False,
-    ).agg({"Pload (MW)": "sum"})
+    ).agg({"Load (MW)": "sum"})
     ls_operstage_grp = ls_operstage_grp.rename(
-        columns={"Pload (MW)": "Load Shedding Quantum"})
-    ls_operstage_grp_sum = ls_operstage_grp[["zone", "Load Shedding Quantum"]].groupby(
-        ["zone"]).agg({"Load Shedding Quantum": "sum"}).reset_index()
+        columns={"Load (MW)": "Shedding Quantum"})
 
-    zone_df = pd.merge(
-        ls_operstage_grp_sum,
-        load_df_grp,
-        on='zone',
-        how='left'
-    )[["zone", "Load Shedding Quantum", "Pload (MW)"]]
+    regional_df = ls_operstage_grp.groupby("zone")["Shedding Quantum"].sum()
+    zone_df = pd.merge(regional_df, load_df_grp, on='zone', how='left')
 
-    zone_df['Remaining Load Quantum'] = zone_df['Pload (MW)'] - \
-        zone_df['Load Shedding Quantum']
+    zone_df[["Shedding Quantum", "Load (MW)"]] = zone_df[[
+        "Shedding Quantum", "Load (MW)"]].fillna(0)
+    zone_df["Un-shed Quantum"] = zone_df["Load (MW)"] - \
+        zone_df["Shedding Quantum"]
 
-    df_melted = zone_df.melt(
-        id_vars=['zone'],
-        value_vars=['Load Shedding Quantum', 'Remaining Load Quantum'],
-        var_name='load_type',
-        value_name='mw'
-    )
+    cols = ["Load (MW)", "Shedding Quantum", "Un-shed Quantum"]
+    zone_df[cols] = zone_df[cols].fillna(0).astype(int)
 
-    # st.markdown(vertical_center_css, unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([2, 0.1, 2])
+    staging_ls = ls_operstage_grp.groupby(["zone", scheme]).agg(
+        {"Shedding Quantum": "sum"}).reset_index()
 
-    with col1:
-        fig_shed = px.bar(
-            df_melted,
-            x="zone",
-            y='mw',
-            color='load_type',
+    # 3. Layout: Visualization
+    c1, _, c2, _, c3 = st.columns([1.8, 0.1, 1.5, 0.1, 2])
+
+    with c1:
+        df_melted_regional = zone_df.melt(
+            id_vars=['zone'],
+            value_vars=['Shedding Quantum', 'Un-shed Quantum'],
+            var_name='load_type',
+            value_name='mw'
+        )
+
+        create_stackedBar_chart(
+            df=df_melted_regional,
+            x_col="zone",
+            y_col="mw",
+            color_col="load_type",
             color_discrete_map={
-                'Load Shedding Quantum': 'red',
-                'Remaining Load Quantum': 'lightgray'
+                'Shedding Quantum': '#E74C3C',
+                'Un-shed Quantum': '#D5D8DC',
             },
-            title="Regional Load Shedding Proportion"
+            title=f"{scheme} Shedding Quantum Vs Un-Shed Quantum",
+            category_order={"load_type": [
+                "Un-shed Quantum", "Shedding Quantum"]},
+            key=f"regional_load_shedding_stackedBar"
         )
 
-        fig_shed.update_layout(
-            title={
-                'text': "Regional Load Breakdown: Shedding vs. Balance",
-                'font': {
-                    'size': 18,
-                    'family': 'Arial'
-                },
-                'x': 0.5,
-                'xanchor': 'center'
+    with c2:
+        df_melted_staging = staging_ls.melt(
+            id_vars=['zone', scheme],
+            value_vars=['Shedding Quantum'],
+            var_name='load_type',
+            value_name='mw'
+        )
+
+        scheme_list = staging_ls[scheme].unique().tolist()
+
+        if not scheme_list:
+            sorted_stages = []
+        else:
+            sorted_stages = sorted(scheme_list, key=stage_sort)
+
+        dynamic_color_map = get_dynamic_colors(categories=sorted_stages)
+
+        create_stackedBar_chart(
+            df=df_melted_staging,
+            x_col="zone",
+            y_col="mw",
+            color_col=scheme,
+            color_discrete_map=dynamic_color_map,
+            title=f"{scheme} Regional Operational Staging",
+            category_order={scheme: sorted_stages},
+            key=f"regional_load_shedding_staging_stackedBar"
+        )
+
+    with c3:
+        ls_oper_zone = df[[scheme, "zone", "Load (MW)"]].groupby(
+            [scheme, "zone"],
+            as_index=False,
+        ).agg({"Load (MW)": "sum"})
+
+        ls_sorted = scheme_col_sorted(ls_oper_zone, scheme)
+
+        scheme_list = ls_oper_zone[scheme].unique().tolist()
+        sorted_stages = sorted(scheme_list, key=stage_sort)
+
+        create_stackedBar_chart(
+            ls_sorted,
+            x_col=scheme,
+            y_col="Load (MW)",
+            color_col="zone",
+            title=f"{scheme} Regional Zone Distribution",
+            y_label="Demand (MW)",
+            color_discrete_map={},
+            category_order={
+                "zone": ["KlangValley", "South", "North", "East"],
+                scheme: sorted_stages
             },
-            xaxis_title=None,
-            yaxis_title="Demand (MW)",
-            height=400,
-            width=600,
-            legend_title_text=''
+            height=450,
+            key=f"{scheme}_regional_zone_distribution"
         )
 
-        st.plotly_chart(fig_shed, width='content')
-
-    with col3:
-        total_load = loadprofile.totalMW()
-        total_ls = zone_df["Load Shedding Quantum"].sum()
-        ls_pct = int(total_ls/total_load * 100)
-        st.markdown(
-            f"<p style='margin-top:30px; font-size:18px; font-weight: 600; font-family: Arial'>Total Load Shedding Quantum for {scheme}:</p>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"<p style='margin-top:-20px; color:#2E86C1; font-size:25px; font-weight: 600'>{total_ls:,.0f} MW ({ls_pct}%)</p>",
-            unsafe_allow_html=True,
-        )
-
-        zone_list = zone_df["zone"]
-        for zone in zone_list:
-            zone_load = loadprofile.regional_loadprofile(zone)
-            zone_ls = zone_df.loc[zone_df["zone"] ==
-                                  zone]["Load Shedding Quantum"].values[0]
-            zone_ls_pct = int(zone_ls/zone_load * 100)
-
-            st.markdown(
-                f"<p style='margin-top:-10px; font-size:14px;'>Load Shedding Quantum for {zone}:</p>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f"<p style='margin-top:-20px; color:#2E86C1; font-size:22px; font-weight: 600'>{zone_ls:,.0f} MW ({zone_ls_pct}%)</p>",
-                unsafe_allow_html=True,
-            )

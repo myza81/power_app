@@ -15,8 +15,9 @@ def display_ls_metrics(scheme, df, load_profile):
     col1, col2, col3 = st.columns([2.0, 3.5, 2.5])
 
     total_MD = load_profile["Pload (MW)"].sum()
-    is_scheme_valid = df[scheme].notna() & (df[scheme] != "nan") & (df[scheme] != "#na")
-    
+    is_scheme_valid = df[scheme].notna() & (
+        df[scheme] != "nan") & (df[scheme] != "#na")
+
     total_scheme_ls = df.loc[is_scheme_valid, "Pload (MW)"].sum()
 
     if total_MD == 0:
@@ -54,7 +55,7 @@ def display_ls_metrics(scheme, df, load_profile):
         with col2b:
             zone_metric(col2b, "South", zone_data, zone_MD)
             zone_metric(col2b, "East", zone_data, zone_MD)
-    
+
     with col3:
         pass
 
@@ -89,6 +90,7 @@ def show_temporary_message(message_type, message, duration=3):
 
     placeholder.empty()
 
+
 def find_latest_assignment(data_list):
     latest_entries = {}
     parts = []
@@ -108,7 +110,8 @@ def find_latest_assignment(data_list):
                     'full_name': item
                 }
 
-    latest_selection = [entry['full_name'] for entry in latest_entries.values()]
+    latest_selection = [entry['full_name']
+                        for entry in latest_entries.values()]
     return latest_selection
 
 
@@ -134,3 +137,68 @@ def create_donut_chart(df: pd.DataFrame, names_col: str, title: str, key: str):
         ],
     )
     st.plotly_chart(fig, width="content", key=key)
+
+
+def create_stackedBar_chart(
+    df,
+    x_col="zone",
+    y_col="mw",
+    color_col="load_type",
+    title="Regional Load Breakdown",
+    y_label="Demand (MW)",
+    color_discrete_map={},
+    category_order={},
+    height=450,
+    key=None
+):
+    fig = px.bar(
+        df,
+        x=x_col,
+        y=y_col,
+        color=color_col,
+        barmode="stack",
+        color_discrete_map=color_discrete_map,
+        category_orders=category_order
+    )
+
+    fig.update_layout(
+        title={"text": title, "x": 0.5, "font": {"size": 18}, 'xanchor': 'center'},
+        xaxis_title=None,
+        yaxis_title=y_label,
+        height=height,
+        # Positions legend horizontally above the chart
+        legend=dict(
+            title=None,
+            orientation="v", # v=vertical. h=horizontal
+            yanchor="middle", # Center it vertically relative to the chart
+            y=0.5, # 0.5 is the middle of the Y-axis
+            # xanchor="right",
+            x=1.02
+        ),
+        margin=dict(t=80, b=40, l=40, r=20),  # Standardize margins
+        legend_title_text=''
+    )
+
+    st.plotly_chart(fig, width="content", key=key)
+
+
+def get_dynamic_colors(categories, fix_color={}):
+
+    standard_colors = px.colors.qualitative.Safe
+
+    color_idx = 0
+    for cat in categories:
+        if cat not in fix_color:
+            fix_color[cat] = standard_colors[color_idx % len(standard_colors)]
+            color_idx += 1
+
+    return fix_color
+
+def stage_sort(stage_str):
+    try:
+        parts = stage_str.split('_')
+        if len(parts) > 1 and parts[1].isdigit():
+            return int(parts[1])
+    except (ValueError, IndexError):
+        pass
+    return 999

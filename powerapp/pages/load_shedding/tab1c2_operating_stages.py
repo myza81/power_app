@@ -2,46 +2,21 @@ import streamlit as st
 import plotly.express as px
 
 from applications.load_shedding.helper import scheme_col_sorted
+from pages.load_shedding.helper import create_donut_chart, create_stackedBar_chart, get_dynamic_colors, stage_sort
 
 
 def operating_stages_bar(df, scheme):
 
-    ls_oper_zone = df[[scheme, "zone", "Pload (MW)"]].groupby(
+    ls_oper_zone = df[[scheme, "zone", "Load (MW)"]].groupby(
         [scheme, "zone"],
         as_index=False,
-    ).agg({"Pload (MW)": "sum"})
+    ).agg({"Load (MW)": "sum"})
 
-    ls_operstage_grp = ls_oper_zone.rename(
-        columns={"Pload (MW)": "Load (MW)"})
-    ls_sorted = scheme_col_sorted(ls_operstage_grp, scheme)
+    ls_sorted = scheme_col_sorted(ls_oper_zone, scheme)
 
-    col1, col2, col3 = st.columns([2, 0.1, 2])
-    with col1:
-        fig_shed = px.bar(
-            ls_sorted,
-            x=scheme,
-            y="Load (MW)",
-            color="zone",
-            title=f"{scheme} Regional Zone Distribution"
-        )
+    c1, _, c2, _, c3 = st.columns([2, 0.1, 2, 0.1, 2])
 
-        fig_shed.update_layout(
-            title={
-                'font': {
-                    'size': 18,
-                    'family': 'Arial'
-                },
-                'x': 0.5,
-                'xanchor': 'center'
-            },
-            height=450,
-            width=600,
-            legend_title_text=''
-        )
-
-        st.plotly_chart(fig_shed, width='content')
-
-    with col3:
+    with c1:
         ls_table = ls_sorted[[scheme, "Load (MW)"]].groupby(
             [scheme],
             as_index=False

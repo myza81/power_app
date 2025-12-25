@@ -161,7 +161,7 @@ class LoadShedding:
         if self.pocket_assign is None or load_dp.empty:
             return pd.DataFrame()
 
-        df = pd.merge(self.pocket_assign, load_dp, on=["mnemonic", "kV"], how="left")
+        df = pd.merge(self.pocket_assign, load_dp, on=["mnemonic"], how="left")
 
         return df
 
@@ -203,8 +203,10 @@ class LoadShedding:
         df = df.rename(
             columns={
                 "zone": "Zone",
+                "state": "State",
                 "gm_subzone": "Subzone",
                 "substation_name": "Substation",
+                "coordinate": "Coordinate"
             }
         )
 
