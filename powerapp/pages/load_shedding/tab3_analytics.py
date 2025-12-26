@@ -1,8 +1,7 @@
 import streamlit as st
 from applications.load_shedding.helper import columns_list
-from pages.load_shedding.tab1c1_ls_barStacked import lshedding_barStacked
-from pages.load_shedding.tab1c2_ls_table import ls_table
-from pages.load_shedding.tab1c3_ls_analytics import lshedding_analytics
+from pages.load_shedding.tab3a_ls_barStacked import lshedding_barStacked
+from pages.load_shedding.tab3b_ls_table import ls_table
 
 
 def ls_analytics():

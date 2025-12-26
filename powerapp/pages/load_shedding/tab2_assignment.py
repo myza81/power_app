@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
-import plotly.express as px
 from datetime import date
 from typing import List, Dict, Any
 
@@ -12,7 +11,7 @@ from applications.load_shedding.helper import (
 )
 from applications.data_processing.read_data import df_search_filter
 from applications.data_processing.save_to import export_to_excel
-from pages.load_shedding.helper import display_ls_metrics, show_temporary_message
+from pages.load_shedding.helper import show_temporary_message
 from pages.load_shedding.helper import create_donut_chart
 from css.streamlit_css import custom_metric
 
@@ -69,8 +68,6 @@ def loadshedding_assignment() -> None:
 
     # 1. State Initialization
     lprofile_obj = st.session_state["loadprofile"]
-    # load_df = lprofile_obj.df
-    total_mw = lprofile_obj.totalMW()
 
     ls_obj = st.session_state["loadshedding"]
     subs_metadata = ls_obj.subs_meta()
@@ -235,8 +232,9 @@ def loadshedding_assignment() -> None:
                     f"No active load shedding {scheme} assignment found for the selected filters."
                 )
 
-    # 6. Metrics and Charts
     st.divider()
+    
+    # 6. Metrics and Charts
     for ls_sch in available_schemes:
         st.subheader(f"Summary: {ls_sch}")
         col_pie1, col_pie2, col_metrics = st.columns([2, 2, 2])

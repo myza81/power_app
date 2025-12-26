@@ -1,7 +1,6 @@
 import streamlit as st
 from applications.load_shedding.load_profile import df_search_filter
-from applications.load_shedding.helper import (
-    column_data_list)
+from applications.load_shedding.helper import column_data_list
 
 
 def critical_list():

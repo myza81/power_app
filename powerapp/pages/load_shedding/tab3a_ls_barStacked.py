@@ -1,9 +1,7 @@
 import pandas as pd
 import streamlit as st
-import plotly.express as px
-from css.streamlit_css import custom_metric
 from applications.load_shedding.helper import scheme_col_sorted
-from pages.load_shedding.helper import create_donut_chart, create_stackedBar_chart, get_dynamic_colors, stage_sort
+from pages.load_shedding.helper import create_stackedBar_chart, get_dynamic_colors, stage_sort
 
 
 def lshedding_barStacked(df, scheme):

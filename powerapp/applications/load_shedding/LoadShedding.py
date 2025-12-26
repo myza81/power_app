@@ -47,34 +47,6 @@ def loadshedding_masterlist(ls_df, scheme):
     return ls_assignment
 
 
-def ls_active(ls_df, review_year, scheme) -> pd.DataFrame:
-    ls_assignment = ls_df.copy() if ls_df is not None else pd.DataFrame()
-
-    review_year_list = columns_list(
-        ls_assignment, unwanted_el=["assignment_id"])
-
-    latest_review = review_year
-
-    if latest_review not in review_year_list:
-        review_year_list.sort(reverse=True)
-        latest_review = review_year_list[0]
-
-    ls_assignment.rename(columns={latest_review: scheme}, inplace=True)
-    ls_review = ls_assignment[["assignment_id", scheme]]
-
-    ls_review = ~ls_review[scheme].isin(["nan", "#na"])
-    ls_review_active = ls_assignment.loc[ls_review, ["assignment_id", scheme]]
-
-    ls_review_active["sort_key"] = (
-        ls_review_active[scheme].str.extract(r"stage_(\d+)").astype(int)
-    )
-
-    ls_sorted = ls_review_active.sort_values(by="sort_key", ascending=True)
-    ls_sorted = ls_sorted.drop(columns=["sort_key"]).reset_index(drop=True)
-
-    return pd.DataFrame(ls_sorted)
-
-
 class LoadShedding:
     def __init__(self, load_df: pd.DataFrame, filedir: str = "data") -> None:
         self.load_profile = load_df

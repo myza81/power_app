@@ -1,7 +1,4 @@
 import streamlit as st
-import plotly.express as px
-import numpy as np
-
 from applications.load_shedding.helper import scheme_col_sorted
 from pages.load_shedding.helper import custom_table, find_latest_assignment
 
