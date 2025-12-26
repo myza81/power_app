@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from applications.load_shedding.load_profile import df_search_filter
-from pages.load_shedding.helper import create_donut_chart
+from pages.load_shedding.helper import create_donut_chart, create_bar_chart
 from css.streamlit_css import custom_metric
 
 
@@ -16,15 +16,38 @@ def loadprofile_main():
 def loadprofile_dashboard():
     loadprofile = st.session_state["loadprofile"]
     load_df = loadprofile.df
+    total_mw = loadprofile.totalMW()
 
-    col_pie1, col_metrics = st.columns([2, 2])
+    col_stateBar, col_pie1, col_metrics = st.columns([2, 2, 2])
 
     with col_pie1:
         zone_ls = load_df.groupby(["zone"], as_index=False)["Load (MW)"].sum()
-        create_donut_chart(zone_ls, "zone", "By Zone", f"pie_zone_grid_load_profile")
+        create_donut_chart(
+            df=zone_ls,
+            values_col="Load (MW)",
+            names_col="zone",
+            title="Regional Zone Load Demand",
+            key=f"pie_zone_grid_load_profile",
+            annotations=f"{total_mw:,.0f} MW",
+            height=300,
+            margin=dict(t=80, b=20, l=10, r=10)
+        )
+    
+    with col_stateBar:
+        states = load_df[["state", "Load (MW)"]].groupby("state").agg({"Load (MW)": "sum"}).reset_index()
+        create_bar_chart(
+            df=states,
+            x_col="state",
+            y_col="Load (MW)",
+            title="State Load Demand",
+            y_label="Demand (MW)",
+            height=400,
+            color_discrete_sequence=["#26b41f"],
+            key=f"state_load_demand"
+        )
 
     with col_metrics:
-        total_mw = loadprofile.totalMW()
+        st.markdown("")
         custom_metric(
             label="Maximum Demand (MD)",
             value=f"{total_mw:,.0f} MW",
@@ -88,7 +111,8 @@ def loadprofile_table():
                     key="substation_load_slider",
                 )
 
-    st.dataframe(filtered_df.head(rows_to_display), width="stretch", hide_index=True)
+    st.dataframe(filtered_df.head(rows_to_display),
+                 width="stretch", hide_index=True)
 
 
 def loadprofile_finder():
@@ -145,7 +169,8 @@ def loadprofile_finder():
     subs_loadMW = load_profile_subs.loc[
         load_profile_subs["substation_fullname"] == substation
     ]["Load (MW)"].values[0]
-    st.metric(label=f"Total Demand for {substation}:", value=f"{subs_loadMW:.2f} MW")
+    st.metric(
+        label=f"Total Demand for {substation}:", value=f"{subs_loadMW:.2f} MW")
 
 
 def load_verifyer():
@@ -156,10 +181,11 @@ def load_verifyer():
 
     subs = {
         "Substation": [],
-        "MW":[]
+        "MW": []
     }
     for sub in substations:
-        subs_loadMW = load_dp.loc[load_dp["mnemonic"] == sub]["Load (MW)"].sum()
+        subs_loadMW = load_dp.loc[load_dp["mnemonic"]
+                                  == sub]["Load (MW)"].sum()
         if subs_loadMW <= 0:
             subs["Substation"].append(sub)
             subs["MW"].append(subs_loadMW)

@@ -33,35 +33,30 @@ if load_profile_uploader is not None:
     st.session_state["loadprofile"] = loadprofile
     st.session_state["loadshedding"] = LoadShedding(load_df=loadprofile.df)
 
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "Load Profile",
         "Assignments",
         "Analytics",
         "Simulator",
         "Critical Load List",
-        "Debugging"
     ])
 
     with tab1:
         loadprofile_main()
-        st.divider()
+
     with tab2:
         loadshedding_assignment()
-        st.divider()
+        
     with tab3:
         ls_analytics()
-        st.divider()
         # loadshedding_subset()
     with tab4:
         # ls_reviewer()
         st.divider()
     with tab5:
-        # critical_list()
+        critical_list()
         st.divider()
         # overlap_ls()
-
-    with tab6:
-        debug()
 
 else:
     st.info("Please upload or set a load profile first.")

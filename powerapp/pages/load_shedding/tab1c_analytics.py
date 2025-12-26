@@ -1,7 +1,7 @@
 import streamlit as st
 from applications.load_shedding.helper import columns_list
-from pages.load_shedding.tab1c1_regional import regional_lshedding_stacked
-from pages.load_shedding.tab1c2_operating_stages import operating_stages_bar
+from pages.load_shedding.tab1c1_ls_barStacked import lshedding_barStacked
+from pages.load_shedding.tab1c2_ls_table import ls_table
 from pages.load_shedding.tab1c3_ls_analytics import lshedding_analytics
 
 
@@ -59,8 +59,8 @@ def ls_analytics():
     for target_col in available_cols:
         clean_scheme_df = filtered_data.dropna(subset=[target_col])
         if not clean_scheme_df.empty:
-            regional_lshedding_stacked(clean_scheme_df, target_col)
-            operating_stages_bar(clean_scheme_df, target_col)
+            lshedding_barStacked(clean_scheme_df, target_col)
+            ls_table(clean_scheme_df, target_col)
             # lshedding_analytics(clean_scheme_df, target_col)
         else:
             st.warning(f"Data for {target_col} is empty after filtering.")

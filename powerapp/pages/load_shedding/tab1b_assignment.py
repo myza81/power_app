@@ -59,7 +59,6 @@ def process_display_data(
         "Breaker(s)": lambda x: ", ".join(x.astype(str).unique()),
         "Feeder Assignment": lambda x: ", ".join(x.astype(str).unique()),
         "Voltage Level": lambda x: ", ".join(x.astype(str).unique()),
-
     }
 
     return df_merged.groupby(group_cols, as_index=False, dropna=False).agg(agg_map)
@@ -69,9 +68,11 @@ def loadshedding_assignment() -> None:
     st.subheader("Load Shedding Assignment")
 
     # 1. State Initialization
-    ls_obj = st.session_state["loadshedding"]
-    load_profile_obj = st.session_state["loadprofile"]
+    lprofile_obj = st.session_state["loadprofile"]
+    # load_df = lprofile_obj.df
+    total_mw = lprofile_obj.totalMW()
 
+    ls_obj = st.session_state["loadshedding"]
     subs_metadata = ls_obj.subs_meta()
     masterlist = ls_obj.ls_assignment_masterlist()
 
@@ -99,7 +100,6 @@ def loadshedding_assignment() -> None:
         )
 
     with c3:
-
         zones = st.multiselect(
             "Zone",
             options=ls_obj.ls_assignment_masterlist()[
@@ -115,6 +115,16 @@ def loadshedding_assignment() -> None:
             label="Grid Maintenace Subzone", options=subzone_list)
 
     with c5:
+        state_list = [
+            str(s) for s in subs_metadata["state"].dropna().unique()
+            if str(s).strip().lower() not in ["nan", ""]
+        ]
+        state = st.multiselect(
+            label="State",
+            options=state_list,
+        )
+
+    with c6:
         stage_opts = ls_obj.ufls_setting.columns.tolist()
         if len(schemes) == 1:
             if schemes[0] == "UVLS":
@@ -123,7 +133,7 @@ def loadshedding_assignment() -> None:
                 stage_opts = []
         stages = st.multiselect("Operating Stage", options=stage_opts)
 
-    with c6:
+    with c7:
         dp_type_list = (
             masterlist["dp_type"].replace(
                 [""], np.nan).dropna().unique().tolist()
@@ -139,6 +149,7 @@ def loadshedding_assignment() -> None:
         "scheme": schemes,
         "op_stage": stages,
         "zone": zones,
+        "state": state,
         "gm_subzone": subzone,
         "dp_type": dp_type,
     }
@@ -146,14 +157,15 @@ def loadshedding_assignment() -> None:
     filtered_data = ls_obj.filtered_data(filters=filters, df=masterlist)
 
     # st.markdown("filtered_data")
-    # st.dataframe(filtered_data)
+    # st.dataframe(masterlist)
 
     if filtered_data.empty:
         st.info("No active load shedding assignment found.")
         return
 
     # 4. Search and Table Processing
-    with c7:
+    searched_df = pd.DataFrame()
+    with c8:
         search_query = st.text_input(
             "Search:", placeholder="Enter keyword...", key="ls_search"
         )
@@ -164,6 +176,10 @@ def loadshedding_assignment() -> None:
         for ls in schemes
         if f"{ls}_{review_year}" in filtered_data.columns
     ]
+
+    missing_scheme = set([f"{ls}_{review_year}"for ls in schemes]).difference(
+        set(filtered_data.columns)
+    )
 
     if not searched_df.empty:
 
@@ -190,8 +206,13 @@ def loadshedding_assignment() -> None:
             df_display.reindex(columns=cols_order), width="stretch", hide_index=True
         )
 
+        # st.markdown(
+        #     f'Displaying <span style="color:#2E86C1; font-size: 16px; font-weight: 600"> {len(df_display):,} </span> results out of <span style="color:#2E86C1; font-size: 16px; font-weight: 600"> {len(searched_df):,} </span> total',
+        #     unsafe_allow_html=True
+        # )
+
         # 5. Export Section
-        c10, c11, c12 = st.columns([2, 1, 2])
+        c10, _, _ = st.columns([3, 1, 2])
 
         with c10:
             export_col, btn_col = st.columns([3, 1])
@@ -208,6 +229,12 @@ def loadshedding_assignment() -> None:
                 ):
                     show_temporary_message("info", f"Saved as {filename}.xlsx")
 
+        if missing_scheme:
+            for scheme in missing_scheme:
+                st.info(
+                    f"No active load shedding {scheme} assignment found for the selected filters."
+                )
+
     # 6. Metrics and Charts
     st.divider()
     for ls_sch in available_schemes:
@@ -218,26 +245,31 @@ def loadshedding_assignment() -> None:
         plot_df = filtered_data.copy()
         plot_df[ls_sch] = plot_df[ls_sch].replace("nan", np.nan)
 
+        zone_ls = plot_df.groupby(["zone", ls_sch], as_index=False)[
+            "Load (MW)"
+        ].sum()
+        total_ls_mw = zone_ls["Load (MW)"].sum()
+        total_system_mw = ls_obj.load_profile["Load (MW)"].sum()
+
         with col_pie1:
-            zone_ls = plot_df.groupby(["zone", ls_sch], as_index=False)[
-                "Load (MW)"
-            ].sum()
-            create_donut_chart(zone_ls, "zone", "By Zone",
-                               f"pie_zone_{ls_sch}")
+            create_donut_chart(
+                df=zone_ls,
+                values_col="Load (MW)",
+                names_col="zone",
+                title=f"{ls_sch} Assignment - by Regional Zone",
+                key=f"pie_zone_{ls_sch}",
+                annotations=f"{total_ls_mw:,.0f} MW",
+            )
 
         with col_metrics:
-            total_ls_mw = zone_ls["Load (MW)"].sum()
-            total_system_mw = ls_obj.load_profile["Load (MW)"].sum()
-
             custom_metric(
                 "Total Load Shed",
                 f"{total_ls_mw:,.0f} MW",
                 f"{(total_ls_mw/total_system_mw)*100:.1f}% of MD",
             )
 
-            # Regional breakdown
             for z in zone_ls["zone"].unique():
-                z_total = load_profile_obj.regional_loadprofile(z)
+                z_total = lprofile_obj.regional_loadprofile(z)
                 z_shed = zone_ls[zone_ls["zone"] == z]["Load (MW)"].sum()
                 st.caption(
                     f"**{z}**: {z_shed:,.0f} MW ({(z_shed/z_total)*100:.1f}%)")
@@ -246,9 +278,12 @@ def loadshedding_assignment() -> None:
             dp_ls = plot_df.groupby(["dp_type", ls_sch], as_index=False)[
                 "Load (MW)"
             ].sum()
+
             create_donut_chart(
                 df=dp_ls,
+                values_col="Load (MW)",
                 names_col="dp_type",
-                title="By Load Type",
+                title=f"{ls_sch} Assignment - by Load Type",
                 key=f"pie_dp_{ls_sch}",
+                annotations=f"{total_ls_mw:,.0f} MW",
             )

@@ -7,11 +7,12 @@ class LoadProfile:
     STATE_MAPPING: Dict[str, str] = {
         "LANGKAWI": "KEDAH",
         "WPKL": "KL",
-        "TGANU": "TERENGGANU"
+        "TGANU": "TERENGGANU",
+        "P PINANG": "PENANG"
     }
 
     ZONE_STRUCTURE: Dict[str, List[str]] = {
-        "North": ["Kedah", "Perlis", "P Pinang", "Perak"],
+        "North": ["Kedah", "Perlis", "Penang", "Perak"],
         "KlangValley": ["KL", "Selangor"],
         "South": ["NS", "Johor", "Melaka"],
         "East": ["Kelantan", "Terengganu", "Pahang"],

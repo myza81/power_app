@@ -1,4 +1,5 @@
 import time
+import textwrap
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -115,10 +116,19 @@ def find_latest_assignment(data_list):
     return latest_selection
 
 
-def create_donut_chart(df: pd.DataFrame, names_col: str, title: str, key: str):
-    """Helper to generate standardized donut charts."""
-    total_mw = df["Load (MW)"].sum()
-    fig = px.pie(df, values="Load (MW)", names=names_col, hole=0.5)
+def create_donut_chart(
+    df,
+    values_col=None,
+    names_col="",
+    title="",
+    key=None,
+    annotations="",
+    height=250,
+    margin=dict(t=30, b=20, l=10, r=10),
+):
+    fig = px.pie(df, values=values_col, names=names_col, hole=0.5)
+
+    display_title = "<br>".join(textwrap.wrap(title, width=40))
 
     fig.update_traces(
         hoverinfo="label+percent+value",
@@ -126,18 +136,60 @@ def create_donut_chart(df: pd.DataFrame, names_col: str, title: str, key: str):
         textfont_size=10,
         textposition="auto",
     )
+
     fig.update_layout(
+        title={"text": display_title, "x": 0.5,
+               "font": {"size": 18}, 'xanchor': 'center'},
         showlegend=False,
-        height=250,
-        margin=dict(t=30, b=20, l=10, r=10),
+        height=height,
+        margin=margin,
         annotations=[
             dict(
-                text=f"{total_mw:,.0f} MW", x=0.5, y=0.5, font_size=18, showarrow=False
+                text=annotations, x=0.5, y=0.5, font_size=18, showarrow=False
             )
         ],
     )
     st.plotly_chart(fig, width="content", key=key)
 
+def create_bar_chart(
+    df,
+    x_col="zone",
+    y_col="mw",
+    title="Regional Load Breakdown",
+    color_discrete_map={},
+    color_discrete_sequence=["#1f77b4"],
+    y_label="Demand (MW)",
+    height=400,
+    key=None
+):
+    fig = px.bar(
+        df,
+        x=x_col,
+        y=y_col,
+        color_discrete_map=color_discrete_map,
+        color_discrete_sequence=color_discrete_sequence,
+    )
+
+    display_title = "<br>".join(textwrap.wrap(title, width=40))
+
+    fig.update_layout(
+        title={"text": display_title, "x": 0.5,
+               "font": {"size": 18}, 'xanchor': 'center'},
+        xaxis_title=None,
+        yaxis_title=y_label,
+        height=height,
+        legend=dict(
+            title=None,
+            orientation="v",  # v=vertical. h=horizontal
+            yanchor="middle",  # Center it vertically relative to the chart
+            y=0.5,  # 0.5 is the middle of the Y-axis
+            x=1.02
+        ),
+        margin=dict(t=80, b=40, l=40, r=20),  # Standardize margins
+        legend_title_text=''
+    )
+
+    st.plotly_chart(fig, width="content", key=key)
 
 def create_stackedBar_chart(
     df,
@@ -161,18 +213,19 @@ def create_stackedBar_chart(
         category_orders=category_order
     )
 
+    display_title = "<br>".join(textwrap.wrap(title, width=40))
+
     fig.update_layout(
-        title={"text": title, "x": 0.5, "font": {"size": 18}, 'xanchor': 'center'},
+        title={"text": display_title, "x": 0.5,
+               "font": {"size": 18}, 'xanchor': 'center'},
         xaxis_title=None,
         yaxis_title=y_label,
         height=height,
-        # Positions legend horizontally above the chart
         legend=dict(
             title=None,
-            orientation="v", # v=vertical. h=horizontal
-            yanchor="middle", # Center it vertically relative to the chart
-            y=0.5, # 0.5 is the middle of the Y-axis
-            # xanchor="right",
+            orientation="v",  # v=vertical. h=horizontal
+            yanchor="middle",  # Center it vertically relative to the chart
+            y=0.5,  # 0.5 is the middle of the Y-axis
             x=1.02
         ),
         margin=dict(t=80, b=40, l=40, r=20),  # Standardize margins
@@ -185,7 +238,6 @@ def create_stackedBar_chart(
 def get_dynamic_colors(categories, fix_color={}):
 
     standard_colors = px.colors.qualitative.Safe
-
     color_idx = 0
     for cat in categories:
         if cat not in fix_color:
@@ -193,6 +245,7 @@ def get_dynamic_colors(categories, fix_color={}):
             color_idx += 1
 
     return fix_color
+
 
 def stage_sort(stage_str):
     try:
@@ -202,3 +255,16 @@ def stage_sort(stage_str):
     except (ValueError, IndexError):
         pass
     return 999
+
+def custom_table(table_title, table_content):
+    display_title = "<br>".join(textwrap.wrap(table_title, width=40))
+
+    st.markdown(
+        f"""<style>
+            .table-container {{max-height: 400px; overflow-y: auto; border: 1px solid #e6e9ef; border-radius: 10px; margin-top:10px;}}
+            .custom-table {{width: 100%;border-collapse: collapse; font-family: Arial; font-size: 12px; margin-bottom: 0 !important}}
+            .custom-table th{{position: sticky; top: 0; background-color: #BDBDBD; z-index: 1; padding: 10px; text-align: center; border: 1px solid #e6e9ef;}}
+            .custom-table td {{padding: 10px; border: 1px solid #e6e9ef; vertical-align: top;}}
+            .table-title{{margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial}}</style><div class='table-title'>{display_title}</div><div class='table-container'>{table_content}</div>""",
+        unsafe_allow_html=True
+    )

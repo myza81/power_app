@@ -6,7 +6,7 @@ from applications.load_shedding.helper import scheme_col_sorted
 from pages.load_shedding.helper import create_donut_chart, create_stackedBar_chart, get_dynamic_colors, stage_sort
 
 
-def regional_lshedding_stacked(df, scheme):
+def lshedding_barStacked(df, scheme):
     # 1. Data Preparation & Aggregation
     load_profile_obj = st.session_state["loadprofile"]
     load_df_grp = load_profile_obj.df.groupby(
@@ -18,29 +18,31 @@ def regional_lshedding_stacked(df, scheme):
         as_index=False,
     ).agg({"Load (MW)": "sum"})
     ls_operstage_grp = ls_operstage_grp.rename(
-        columns={"Load (MW)": "Shedding Quantum"})
+        columns={"Load (MW)": "Shedding"})
 
-    regional_df = ls_operstage_grp.groupby("zone")["Shedding Quantum"].sum()
+    regional_df = ls_operstage_grp.groupby("zone")["Shedding"].sum()
     zone_df = pd.merge(regional_df, load_df_grp, on='zone', how='left')
 
-    zone_df[["Shedding Quantum", "Load (MW)"]] = zone_df[[
-        "Shedding Quantum", "Load (MW)"]].fillna(0)
-    zone_df["Un-shed Quantum"] = zone_df["Load (MW)"] - \
-        zone_df["Shedding Quantum"]
+    zone_df[["Shedding", "Load (MW)"]] = zone_df[[
+        "Shedding", "Load (MW)"]].fillna(0)
+    zone_df["Un-shed"] = zone_df["Load (MW)"] - \
+        zone_df["Shedding"]
 
-    cols = ["Load (MW)", "Shedding Quantum", "Un-shed Quantum"]
+    cols = ["Load (MW)", "Shedding", "Un-shed"]
     zone_df[cols] = zone_df[cols].fillna(0).astype(int)
 
     staging_ls = ls_operstage_grp.groupby(["zone", scheme]).agg(
-        {"Shedding Quantum": "sum"}).reset_index()
+        {"Shedding": "sum"}).reset_index()
 
     # 3. Layout: Visualization
     c1, _, c2, _, c3 = st.columns([1.8, 0.1, 1.5, 0.1, 2])
-
+    st.divider()
+    
+    # Regional Zone Shedding Quantum Vs Un-Shed Quantum
     with c1:
         df_melted_regional = zone_df.melt(
             id_vars=['zone'],
-            value_vars=['Shedding Quantum', 'Un-shed Quantum'],
+            value_vars=['Shedding', 'Un-shed'],
             var_name='load_type',
             value_name='mw'
         )
@@ -51,19 +53,20 @@ def regional_lshedding_stacked(df, scheme):
             y_col="mw",
             color_col="load_type",
             color_discrete_map={
-                'Shedding Quantum': '#E74C3C',
-                'Un-shed Quantum': '#D5D8DC',
+                'Shedding': '#E74C3C',
+                'Un-shed': '#D5D8DC',
             },
-            title=f"{scheme} Shedding Quantum Vs Un-Shed Quantum",
+            title=f"{scheme} Shedding Quantum Vs Un-Shed Quantum - by Regional Zone",
             category_order={"load_type": [
-                "Un-shed Quantum", "Shedding Quantum"]},
+                "Un-shed", "Shedding"]},
             key=f"regional_load_shedding_stackedBar"
         )
 
+    # Regional Operating Stage
     with c2:
         df_melted_staging = staging_ls.melt(
             id_vars=['zone', scheme],
-            value_vars=['Shedding Quantum'],
+            value_vars=['Shedding'],
             var_name='load_type',
             value_name='mw'
         )
@@ -81,13 +84,15 @@ def regional_lshedding_stacked(df, scheme):
             df=df_melted_staging,
             x_col="zone",
             y_col="mw",
+            y_label="Load Shedd Quantum (MW)",
             color_col=scheme,
             color_discrete_map=dynamic_color_map,
-            title=f"{scheme} Regional Operational Staging",
+            title=f"{scheme} Operational Staging - by Regional Zone",
             category_order={scheme: sorted_stages},
             key=f"regional_load_shedding_staging_stackedBar"
         )
 
+    # Regional Distribution
     with c3:
         ls_oper_zone = df[[scheme, "zone", "Load (MW)"]].groupby(
             [scheme, "zone"],
@@ -104,8 +109,8 @@ def regional_lshedding_stacked(df, scheme):
             x_col=scheme,
             y_col="Load (MW)",
             color_col="zone",
-            title=f"{scheme} Regional Zone Distribution",
-            y_label="Demand (MW)",
+            title=f"{scheme} Regional Zone Distributions",
+            y_label="Load Shedd Quantum (MW)",
             color_discrete_map={},
             category_order={
                 "zone": ["KlangValley", "South", "North", "East"],
