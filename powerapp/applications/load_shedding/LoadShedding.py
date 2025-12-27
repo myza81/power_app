@@ -82,6 +82,9 @@ class LoadShedding:
         self.LOADSHED_SCHEME = ["UFLS", "UVLS", "EMLS"]
 
     def subs_meta(self):
+        if self.substations is None:
+            return pd.DataFrame()
+        
         self.zone_mapping = {
             "North-Perda": "North",
             "North-Ipoh": "North",
@@ -105,6 +108,7 @@ class LoadShedding:
         if (
             self.delivery_point is None
             or self.load_profile is None
+            or self.flaglist is None
             or self.subs_meta().empty
         ):
             return pd.DataFrame()

@@ -4,6 +4,10 @@ from pages.load_shedding.helper import custom_table, find_latest_assignment
 
 
 def ls_table(df, scheme):
+    ls_obj = st.session_state.get("loadshedding")
+
+    if ls_obj is None:
+        return
 
     ls_oper_zone = df[[scheme, "zone", "Load (MW)"]].groupby(
         [scheme, "zone"],
@@ -47,7 +51,7 @@ def ls_table(df, scheme):
             table_title=f"{scheme} Overlaps With Critical Substation Table:", table_content=html_flaglist_table)
 
     with c3:
-        ls_obj = st.session_state.get("loadshedding")
+
         masterlist = ls_obj.ls_assignment_masterlist()
 
         lshedding_columns = [
