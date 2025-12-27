@@ -9,23 +9,93 @@ from applications.load_shedding.load_profile import (
 )
 from pages.load_shedding.helper import display_ls_metrics
 
-
 def simulator():
-    # 1. State Initialization
-    load_obj = st.session_state.get("loadprofile")
-    total_mw = load_obj.totalMW()
+    load_shed_assignment()
 
+
+def load_shed_assignment():
+
+
+    # 1. Initialize data
     ls_obj = st.session_state.get("loadshedding")
-    masterlist = ls_obj.ls_assignment_masterlist
+    masterlist = ls_obj.ls_assignment_masterlist()
+    incomer_relay = ls_obj.incomer_relay()
+
+
+
+
+    st.dataframe(masterlist)
+    st.markdown("rly_incomer")
+    st.dataframe(incomer_relay)
+
+    ls_candidate = pd.concat([masterlist, incomer_relay], ignore_index=True, axis=0, join='outer')
+    ls_candidate_unique = ls_candidate.drop_duplicates(subset=['assignment_id', 'feeder_id'], keep="first")
+
+    st.markdown("ls_candidate")
+    st.dataframe(ls_candidate)
+    st.dataframe(ls_candidate_unique)
+
+    if "my_data" not in st.session_state:
+        st.session_state.my_data = pd.DataFrame({
+            "Task": ["System Check", "Data Entry", "Review"],
+            "Status": ["Pending", "Pending", "Pending"],
+            "Notes": ["", "", ""]
+        })
+
+    # 2. The Correct Callback Logic
+    def handle_change():
+        # Retrieve the state of the editor
+        state = st.session_state.editor_key
+        st.write(state)
+        
+        # IMPORTANT: Update the source dataframe with ALL edits
+        for row_idx, edits in state["edited_rows"].items():
+            for col_name, new_val in edits.items():
+                # Update the source of truth
+                st.session_state.my_data.at[row_idx, col_name] = new_val
+                
+                # --- APPLY YOUR LOGIC CONDITIONS HERE ---
+                if col_name == "Status" and new_val == "Completed":
+                    st.session_state.my_data.at[row_idx, "Notes"] = "Auto-filled: Done!"
+                # ----------------------------------------
+
+    # 3. Display the Data Editor
+    st.data_editor(
+        st.session_state.my_data,
+        key="editor_key",
+        on_change=handle_change,
+        column_config={
+            "Status": st.column_config.SelectboxColumn(
+                "Current Status",
+                options=["Pending", "In Progress", "Completed"],
+            ),
+            "Task": st.column_config.Column(disabled=True),
+        },
+        hide_index=True
+    )
+    
+    
+    
+    
+    
+    
+    
+    
+    # 1. State Initialization
+    # load_obj = st.session_state.get("loadprofile")
+    # total_mw = load_obj.totalMW()
+
+    # ls_obj = st.session_state.get("loadshedding")
+    # masterlist = ls_obj.ls_assignment_masterlist
     
 
 
-    ufls_setting = ls_obj.ufls_setting
-    uvls_setting = ls_obj.uvls_setting
+    # ufls_setting = ls_obj.ufls_setting
+    # uvls_setting = ls_obj.uvls_setting
 
-    TARGET_UFLS = 0.5
-    TARGET_UVLS = 0.2
-    TARGET_EMLS = 0.3
+    # TARGET_UFLS = 0.5
+    # TARGET_UVLS = 0.2
+    # TARGET_EMLS = 0.3
 
 
 

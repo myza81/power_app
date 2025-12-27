@@ -256,15 +256,35 @@ def stage_sort(stage_str):
         pass
     return 999
 
+def join_unique_non_empty(series):
+    unique_vals = [str(v) for v in series.dropna().unique() if str(v).strip() != ""]
+    return ", ".join(unique_vals) if unique_vals else None
+
 def custom_table(table_title, table_content):
     display_title = "<br>".join(textwrap.wrap(table_title, width=40))
 
+    # st.markdown(
+    #     f"""<style>
+    #         .table-container {{overflow: hidden; border: 1px solid #e6e9ef; border-radius: 5px; margin-top:10px;}}
+    #         .custom-table {{width: 100%; border-collapse: collapse; font-family: 'Source Sans Pro', sans-serif; font-size: 12px; margin-bottom: 0 !important; display: flex; flex-direction: column; border: 1px solid transparent }}
+    #         .custom-table thead {{display: table; width: 100%; table-layout: fixed; background-color: #BDBDBD;}}
+    #         .custom-table tr {{text-align: center !important; display: table; width: 100%; table-layout: fixed;}}
+    #         .custom-table tbody {{ display: block; max-height: 400px; overflow-y: scroll; width: 100%;}}
+    #         .custom-table th, .custom-table td {{padding: 10px; border: 1px solid #e6e9ef; text-align: center; vertical-align: top;}}
+    #         .custom-table tbody tr:nth-child(even) {{background-color: #f9f9f9;}}
+    #         .table-title{{margin-top:30px; font-size:16px; font-weight: 600;}}</style><div class='table-title'>{display_title}</div><div class='table-container'>{table_content}</div>""",
+    #     unsafe_allow_html=True
+    # )
+
     st.markdown(
         f"""<style>
-            .table-container {{max-height: 400px; overflow-y: auto; border: 1px solid #e6e9ef; border-radius: 10px; margin-top:10px;}}
-            .custom-table {{width: 100%;border-collapse: collapse; font-family: Arial; font-size: 12px; margin-bottom: 0 !important}}
-            .custom-table th{{position: sticky; top: 0; background-color: #BDBDBD; z-index: 1; padding: 10px; text-align: center; border: 1px solid #e6e9ef;}}
-            .custom-table td {{padding: 10px; border: 1px solid #e6e9ef; vertical-align: top;}}
-            .table-title{{margin-top:30px; font-size:16px; font-weight: 600; font-family: Arial}}</style><div class='table-title'>{display_title}</div><div class='table-container'>{table_content}</div>""",
+        .table-container {{max-height: 400px;overflow-y: auto;border: 1px solid #e6e9ef;border-radius: 5px;margin-top: 10px;}}
+        .custom-table {{width: 100%;border-collapse: collapse; font-family: inherit; font-size: 13px; margin-bottom: 0 !important}}
+        .custom-table thead th {{position: sticky;top: 0;background-color: #BDBDBD; color: black;z-index: 10;padding: 12px;text-align: center;border-bottom: 2px solid #e6e9ef;border-right: 1px solid #e6e9ef;}}
+        .custom-table td {{padding: 10px;border: 1px solid #f0f2f6;text-align: center;vertical-align: top;}}
+        .custom-table tbody tr:nth-child(even) {{background-color: #f9f9f9;}}
+        .table-title {{margin-top: 30px;font-size: 16px;font-weight: 600;}}
+        </style><div class='table-title'>{display_title}</div><div class='table-container'>{table_content}</div>
+        """,
         unsafe_allow_html=True
     )

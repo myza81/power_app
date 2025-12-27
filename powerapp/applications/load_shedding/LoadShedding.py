@@ -7,6 +7,7 @@ from functools import reduce
 from typing import Optional, Dict, List
 
 from applications.load_shedding.helper import columns_list
+from pages.load_shedding.helper import join_unique_non_empty
 from applications.load_shedding.ufls_setting import UFLS_SETTING
 from applications.load_shedding.uvls_setting import UVLS_SETTING
 
@@ -211,6 +212,20 @@ class LoadShedding:
                 "coordinate": "Coordinate"
             }
         )
+
+        return df
+
+    def incomer_relay(self):
+        if self.rly_incomer is None or self.load_dp().empty:
+            return pd.DataFrame()
+
+        df = pd.merge(
+            self.rly_incomer,
+            self.load_dp(),
+            on="local_trip_id",
+            how="left"
+        )
+        df["assignment_id"] = df["local_trip_id"]
 
         return df
 

@@ -52,7 +52,7 @@ if load_profile_uploader is not None:
         ls_analytics()
 
     with tab4:
-        # simulator()
+        simulator()
         pass
 
     with tab5:
