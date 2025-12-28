@@ -31,6 +31,14 @@ st.markdown(
             justify-content: center !important; 
         }
 
+        div[data-testid="stDataEditor"] td {
+            text-align: center !important;
+        }
+        
+        div[data-testid="stDataEditor"] th {
+            text-align: center !important;
+        }
+
         div[data-testid="stDataFrame"] .ag-header-cell-text {
             text-align: center !important;
         }

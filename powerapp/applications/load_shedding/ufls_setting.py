@@ -1,3 +1,4 @@
+UFLS_TARGET_QUANTUM = 0.5
 UFLS_SETTING = {
             "stage_1": {
                 "freq1": 49.3,

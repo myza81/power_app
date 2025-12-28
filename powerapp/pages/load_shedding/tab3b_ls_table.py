@@ -28,11 +28,15 @@ def ls_table(df, scheme):
         ls_table["Load (MW)"] = ls_table["Load (MW)"].round().astype(int)
 
         ls_table = scheme_col_sorted(ls_table, scheme)
-        html_ls_table = ls_table.to_html(
-            index=False, classes="custom-table", escape=False)
 
-        custom_table(
-            table_title=f"{scheme} Operating Staging and Load Quantum Table:", table_content=html_ls_table)
+        st.dataframe(ls_table, hide_index=True, width="stretch", height=250)
+
+
+        # html_ls_table = ls_table.to_html(
+        #     index=False, classes="custom-table", escape=False)
+
+        # custom_table(
+        #     table_title=f"{scheme} Operating Staging and Load Quantum Table:", table_content=html_ls_table)
 
     with c2:
         flaglist_table = flaglist[["assignment_id", scheme, "mnemonic"]].groupby(
@@ -44,11 +48,15 @@ def ls_table(df, scheme):
         }).rename(columns={"mnemonic": "Substation(s)", "assignment_id": "Assignments"})[[scheme, "Substation(s)", "Assignments"]]
 
         flaglist_table = scheme_col_sorted(flaglist_table, scheme)
-        html_flaglist_table = flaglist_table.to_html(
-            index=False, classes="custom-table", escape=False)
 
-        custom_table(
-            table_title=f"{scheme} Overlaps With Critical Substation Table:", table_content=html_flaglist_table)
+        st.dataframe(flaglist_table, hide_index=True, width="stretch", height=250)
+
+
+        # html_flaglist_table = flaglist_table.to_html(
+        #     index=False, classes="custom-table", escape=False)
+
+        # custom_table(
+        #     table_title=f"{scheme} Overlaps With Critical Substation Table:", table_content=html_flaglist_table)
 
     with c3:
 
@@ -85,11 +93,13 @@ def ls_table(df, scheme):
         overlap_ls_table = scheme_col_sorted(overlap_ls, scheme)
         overlap_ls_table = overlap_ls_table.replace({None: ""})
 
-        html_overlap_ls_table = overlap_ls_table.to_html(
-            index=False, classes="custom-table", escape=False, na_rep="")
+        st.dataframe(overlap_ls_table, hide_index=True, width="stretch", height=250)
 
-        custom_table(
-            table_title=f"{scheme} Overlaps With Other Load Shedding Table:", table_content=html_overlap_ls_table)
+        # html_overlap_ls_table = overlap_ls_table.to_html(
+        #     index=False, classes="custom-table", escape=False, na_rep="")
+
+        # custom_table(
+        #     table_title=f"{scheme} Overlaps With Other Load Shedding Table:", table_content=html_overlap_ls_table)
 
 
 def join_unique_non_empty(series):

@@ -212,18 +212,20 @@ def loadshedding_assignment() -> None:
         c10, _, _ = st.columns([3, 1, 2])
 
         with c10:
-            export_col, btn_col = st.columns([3, 1])
-            filename = export_col.text_input(
-                "Filename",
-                value=f"{'_'.join(available_schemes)}_DL_{date.today().strftime('%d%m%Y')}",
-            )
-            with btn_col:
-                st.markdown("<br>", unsafe_allow_html=True)
-                if btn_col.download_button(
-                    "Export to Excel",
+            c1, _, c2, _, c3 = st.columns([3, 0.1, 3, 0.1, 3])
+            
+            with c1:
+                filename = st.text_input(
+                    "Filename",
+                    value=f"{'_'.join(available_schemes)}_DL_{date.today().strftime('%d%m%Y')}",
+                )
+                save_btn = st.download_button(
+                    label="Export to Excel",
                     data=export_to_excel(df_display),
                     file_name=f"{filename}.xlsx",
-                ):
+                    width="stretch"
+                )
+                if save_btn:
                     show_temporary_message("info", f"Saved as {filename}.xlsx")
 
         if missing_scheme:
@@ -236,7 +238,7 @@ def loadshedding_assignment() -> None:
     
     # 6. Metrics and Charts
     for ls_sch in available_schemes:
-        st.subheader(f"Summary: {ls_sch}")
+        
         col_pie1, col_pie2, col_metrics = st.columns([2, 2, 2])
 
         # Data Prep for charts
