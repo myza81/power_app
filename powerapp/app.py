@@ -25,6 +25,12 @@ st.markdown(
             font-size: 18px; 
         }
 
+        .stDataFrame [data-testid="stDataFrame"] td:nth-child(2) {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            max-width: 300px !important;
+        }
+
         div[data-testid="stDataFrame"] .ag-cell {
             display: flex !important;
             align-items: center !important; 

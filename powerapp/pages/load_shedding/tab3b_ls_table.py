@@ -28,7 +28,8 @@ def ls_table(df, scheme):
         ls_table["Load (MW)"] = ls_table["Load (MW)"].round().astype(int)
 
         ls_table = scheme_col_sorted(ls_table, scheme)
-
+        
+        st.markdown(f"**📈 {scheme} Operating Staging and Load Quantum**")
         st.dataframe(ls_table, hide_index=True, width="stretch", height=250)
 
 
@@ -48,7 +49,8 @@ def ls_table(df, scheme):
         }).rename(columns={"mnemonic": "Substation(s)", "assignment_id": "Assignments"})[[scheme, "Substation(s)", "Assignments"]]
 
         flaglist_table = scheme_col_sorted(flaglist_table, scheme)
-
+        
+        st.markdown(f"**🚨 {scheme} Overlaps With Critical Substation**")
         st.dataframe(flaglist_table, hide_index=True, width="stretch", height=250)
 
 
@@ -93,6 +95,7 @@ def ls_table(df, scheme):
         overlap_ls_table = scheme_col_sorted(overlap_ls, scheme)
         overlap_ls_table = overlap_ls_table.replace({None: ""})
 
+        st.markdown(f"**🚨 {scheme} Overlaps With Other Load Shedding**")
         st.dataframe(overlap_ls_table, hide_index=True, width="stretch", height=250)
 
         # html_overlap_ls_table = overlap_ls_table.to_html(

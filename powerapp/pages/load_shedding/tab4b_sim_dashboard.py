@@ -30,7 +30,6 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
     st.caption(
         f"Target Load Shed: {target_quantum_ls:,.1f} MW ({target_quantum*100}% of {total_system_mw:,.0f} MW)")
 
-    # Merge simulator data with candidate data
     simulator = simulator_df.copy().rename(
         columns={"Assignment": "assignment_id", })
 
@@ -97,7 +96,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
             st.info("No stage-based load shedding data available")
 
     with c2:
-        st.markdown("**🗺️ By Zone & Stage**")
+        st.markdown("**⚖️ By Zone & Stage**")
 
         # Group by zone and stage
         sim_zone_stage = sim_ls.groupby(
