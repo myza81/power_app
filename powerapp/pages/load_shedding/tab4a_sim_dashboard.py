@@ -4,7 +4,7 @@ import numpy as np
 from pages.load_shedding.helper import stage_sort
 from applications.load_shedding.helper import scheme_col_sorted
 from applications.load_shedding.ufls_setting import UFLS_TARGET_QUANTUM
-from applications.load_shedding.uvls_setting import UVLS_SETTING
+from applications.load_shedding.uvls_setting import UVLS_TARGET_QUANTUM
 from css.streamlit_css import custom_metric
 
 
@@ -20,7 +20,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
     ls_quantum = {
         "UFLS": UFLS_TARGET_QUANTUM,
-        "UVLS": UVLS_SETTING
+        "UVLS": UVLS_TARGET_QUANTUM
     }
     target_quantum = ls_quantum.get(scheme, 0)
 
@@ -32,11 +32,11 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
     # Merge simulator data with candidate data
     simulator = simulator_df.copy().rename(
-        columns={"Assignment": "assignment_id"})
+        columns={"Assignment": "assignment_id", })
 
     sim_ls = pd.merge(
         candidate_df,
-        simulator[["assignment_id", "Simulator Operating Stage"]],
+        simulator[["assignment_id", "Sim. Oper. Stage"]],
         on="assignment_id",
         how="left"
     ).rename(columns={"Load (MW)": "Load Shed (MW)"})
@@ -55,7 +55,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
         st.markdown("**📈 By Stage**")
 
         # Group by stage
-        sim_stage = sim_ls.groupby(["Simulator Operating Stage"], as_index=False)[
+        sim_stage = sim_ls.groupby(["Sim. Oper. Stage"], as_index=False)[
             "Load Shed (MW)"].sum()
 
         if not sim_stage.empty:
@@ -73,7 +73,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
             # Sort by stage
             ls_table = scheme_col_sorted(
-                sim_stage, 'Simulator Operating Stage')
+                sim_stage, "Sim. Oper. Stage")
 
             # Display with formatting
             display_df = ls_table.style.format({
@@ -101,7 +101,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
         # Group by zone and stage
         sim_zone_stage = sim_ls.groupby(
-            ["zone", "Simulator Operating Stage"], as_index=False
+            ["zone", "Sim. Oper. Stage"], as_index=False
         ).agg({"Load Shed (MW)": "sum"})
 
         if not sim_zone_stage.empty:
@@ -124,8 +124,8 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
             )
 
             # Sort and select columns
-            sim_zone = scheme_col_sorted(sim_merged, 'Simulator Operating Stage')[
-                ['Simulator Operating Stage', "zone",
+            sim_zone = scheme_col_sorted(sim_merged, "Sim. Oper. Stage")[
+                ["Sim. Oper. Stage", "zone",
                     "Load Shed (MW)", "% of Zone Load"]
             ]
 
@@ -148,7 +148,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
         # System metrics
         custom_metric(
-            "Simulator Total Load Shed",
+            "Simulator Total Quantum",
             f"{total_shed_stage:,.0f} MW",
             f"{(total_shed_stage/total_system_mw)*100:.1f}% of System Load",
         )

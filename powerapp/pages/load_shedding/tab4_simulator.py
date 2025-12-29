@@ -1,14 +1,18 @@
 import pandas as pd
 import streamlit as st
+from pages.load_shedding.helper import stage_sort
 from pages.load_shedding.helper import join_unique_non_empty
 from pages.load_shedding.tab4a_sim_dashboard import sim_dashboard
+from applications.load_shedding.helper import scheme_col_sorted
+from css.streamlit_css import custom_metric
 
 
 def simulator():
     st.subheader("Load Shedding Assignment Simulator")
 
     ls_obj = st.session_state.get("loadshedding")
-    if not ls_obj:
+    lprofile_obj = st.session_state["loadprofile"]
+    if not ls_obj and not lprofile_obj:
         st.error("Load shedding data not found in session state.")
         return
 
@@ -84,35 +88,95 @@ def simulator():
     result_container = st.container()
 
     with editor_container:
-        edited_df = st.data_editor(
-            view_df[
-                ["Zone", "Assignment", review_year,
-                    "Simulator Operating Stage", "Load (MW)", "Flag"]
-            ],
-            key=editor_key,
-            hide_index=True,
-            width='stretch',
-            column_config={
-                "Simulator Operating Stage": st.column_config.SelectboxColumn(
-                    "Simulator Operating Stage",
-                    options=stage_options,
-                    help="Select the operating stage",
-                ),
-                "Zone": st.column_config.Column(disabled=True),
-                "Assignment": st.column_config.Column(disabled=True),
-                review_year: st.column_config.Column(
-                    f"Reference: {review_year}", disabled=True
-                ),
-                "Load (MW)": st.column_config.Column(disabled=True),
-                "Flag": st.column_config.Column(disabled=True),
-            },
-        )
+        editor_table, metrics = st.columns([3, 1])
 
-        if editor_key in st.session_state:
-            editor_state = st.session_state[editor_key]
+        with editor_table:
+            edited_df = st.data_editor(
+                view_df[
+                    ["Zone", "Assignment", review_year,
+                        "Sim. Oper. Stage", "Load (MW)", "Flag"]
+                ],
+                key=editor_key,
+                hide_index=True,
+                width='stretch',
+                column_config={
+                    "Sim. Oper. Stage": st.column_config.SelectboxColumn(
+                        "Sim. Oper. Stage",
+                        options=stage_options,
+                        help="Select the operating stage",
+                    ),
+                    "Zone": st.column_config.Column(disabled=True),
+                    "Assignment": st.column_config.Column(disabled=True),
+                    review_year: st.column_config.Column(
+                        f"Ref.: {review_year}", disabled=True
+                    ),
+                    "Load (MW)": st.column_config.Column(disabled=True),
+                    "Flag": st.column_config.Column(disabled=True),
+                },
+            )
 
-            if "edited_rows" in editor_state or "added_rows" in editor_state:
-                update_master_from_editor(master_df, editor_state, review_year)
+            if editor_key in st.session_state:
+                editor_state = st.session_state[editor_key]
+
+                if "edited_rows" in editor_state or "added_rows" in editor_state:
+                    update_master_from_editor(
+                        master_df, editor_state, review_year)
+
+        with metrics:
+
+            sim_ls = pd.merge(
+                raw_candidate,
+                master_df[["Assignment", "Sim. Oper. Stage"]],
+                left_on="assignment_id",
+                right_on="Assignment",
+                how="left"
+            )
+
+            stg_quantum = sim_ls.groupby(
+                ["Sim. Oper. Stage", "zone"], as_index=False).agg({"Load (MW)": "sum"})
+
+            stage = scheme_col_sorted(sim_ls.loc[sim_ls["Sim. Oper. Stage"].notna(
+            )], "Sim. Oper. Stage")["Sim. Oper. Stage"]
+
+            oper_stage = st.selectbox(
+                "Filter by Sim. Oper. Stage",
+                options=stage.unique().tolist(),
+                key="sim_oper_stage"
+            )
+
+            quantum_df = stg_quantum.groupby(
+                ["Sim. Oper. Stage"], as_index=False).agg({"Load (MW)": "sum"})
+
+            quantum = quantum_df.loc[quantum_df["Sim. Oper. Stage"]
+                                     == oper_stage, "Load (MW)"]
+            quantum_val = quantum.values[0]
+
+            grid_load = lprofile_obj.totalMW()
+
+            pct = quantum_val/grid_load * 100
+
+            custom_metric(
+                label=f"{oper_stage.title()} Quantum:",
+                value=f"{quantum_val:,.0f} MW <span style='font-size: 14px;'>({pct:,.1f}% of {grid_load:,.0f}MW)</span>",
+            )
+
+            for zone in sim_ls["zone"].dropna().unique().tolist():
+
+                sim_zone = stg_quantum.loc[stg_quantum["zone"] == zone]
+                sim_zone_stg = sim_zone.loc[sim_zone["Sim. Oper. Stage"]
+                                            == oper_stage]
+                # st.write(sim_zone_stg)
+                mw_zone_stg = 0
+                if not sim_zone_stg.empty:
+                    mw_zone_stg = sim_zone_stg["Load (MW)"].values[0]
+
+                zone_load = lprofile_obj.regional_loadprofile(zone)
+                zone_load_pct = mw_zone_stg/zone_load * 100
+
+                st.markdown(
+                    f'<span style="color: inherit; font-size: 14px; font-weight: 400">{zone}: </span><span style="color: inherit; font-size: 16px; font-weight: 600">{mw_zone_stg:,.0f} MW ({zone_load_pct:,.1f}% of {zone_load:,.0f}MW)</span>',
+                    unsafe_allow_html=True,
+                )
 
     with result_container:
         sim_dashboard(simulator_df=master_df,
@@ -151,15 +215,6 @@ def build_master_sim_df(ls_obj, review_year):
     valid_candidate = raw_candidate.groupby(
         grp_cols, dropna=False).agg(agg_dict).reset_index()
 
-    # valid_candidate = (
-    #     pd.merge(masterlist, scheme_map, on="assignment_id", how="left")
-    #     .pipe(lambda df: pd.concat([df, incomer], ignore_index=True, sort=False))
-    #     .drop_duplicates(subset=["feeder_id", "assignment_id", "local_trip_id"])
-    #     .groupby(grp_cols, dropna=False)
-    #     .agg(agg_dict)
-    #     .reset_index()
-    # )
-
     valid_candidate = valid_candidate[
         valid_candidate["scheme"].str.lower() != "emls"
     ]
@@ -182,7 +237,7 @@ def build_master_sim_df(ls_obj, review_year):
     if review_year not in sim_df.columns:
         raise ValueError(f"Column '{review_year}' not found in data.")
 
-    sim_df["Simulator Operating Stage"] = sim_df[review_year]
+    sim_df["Sim. Oper. Stage"] = sim_df[review_year]
 
     return sim_df, valid_candidate, raw_candidate
 
@@ -204,12 +259,12 @@ def update_master_from_editor(master_df, editor_state, review_year):
         if assignment is None:
             continue
 
-        if "Simulator Operating Stage" in changes:
-            new_stage = changes["Simulator Operating Stage"]
+        if "Sim. Oper. Stage" in changes:
+            new_stage = changes["Sim. Oper. Stage"]
 
             master_df.loc[
                 master_df["Assignment"] == assignment,
-                "Simulator Operating Stage"
+                "Sim. Oper. Stage"
             ] = new_stage
 
     editor_state["edited_rows"] = {}
