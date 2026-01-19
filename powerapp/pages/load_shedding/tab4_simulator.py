@@ -88,7 +88,7 @@ def simulator():
 
     # Check if dataframe having conflicts
     sim_df = conflict_assignment(
-        sim_df, sim_candidate, ls_obj, review_year)
+        sim_df, sim_candidate, ls_obj, review_year, SIM_STAGE)
 
     sim_data["sim_df"] = sim_df
 
@@ -202,7 +202,7 @@ def simulator():
                 sim_df, raw_candidate, lprofile_obj, review_year)
 
     with alarm_container:
-        display_conflicts(view_df, ls_obj)
+        display_conflicts(view_df, ls_obj, ref_stage_col=SIM_STAGE)
 
     with result_container:
         sim_dashboard(simulator_df=sim_df,
@@ -290,7 +290,7 @@ def display_simulation_metrics(sim_df, raw_candidate, lprofile_obj, review_year)
             )
 
 
-def display_conflicts(view_df, ls_obj):
+def display_conflicts(view_df, ls_obj, ref_stage_col):
 
     warning_rows = view_df[view_df["Flag"].str.contains("Warning", na=False)]
     alert_rows = view_df[view_df["Flag"].str.contains("Alert", na=False)]
@@ -300,13 +300,15 @@ def display_conflicts(view_df, ls_obj):
     if not warning_rows.empty:
         render_conflict_block(
             warning_rows, ls_assign_mlist,
-            f"**{len(warning_rows)} Warning Detected**"
+            f"**{len(warning_rows)} Warning Detected**",
+            ref_stage_col
         )
 
     if not alert_rows.empty:
         render_conflict_block(
             alert_rows, ls_assign_mlist,
-            f"**{len(alert_rows)} Alert Detected**"
+            f"**{len(alert_rows)} Alert Detected**",
+            ref_stage_col
         )
 
     if warning_rows.empty and alert_rows.empty:
@@ -410,17 +412,16 @@ def update_sim_df_from_editor(sim_df, editor_state, review_year):
     return updated_df
 
 
-def render_conflict_block(rows, ls_assign_mlist, label):
+def render_conflict_block(rows, ls_assign_mlist, label, ref_stage_col):
     with st.status(label=label, state="error", expanded=True):
         for _, row in rows.iterrows():
             assignment = row["Assignment"]
-            stage = row[SIM_STAGE]
-
+            stage = row[ref_stage_col]
             with st.expander(f"**{assignment}** ({stage})", icon="⚠️"):
-                render_conflict_details(row, assignment, ls_assign_mlist)
+                render_conflict_details(row, assignment, ls_assign_mlist, ref_stage_col)
 
 
-def render_conflict_details(row, assignment, ls_assign_mlist):
+def render_conflict_details(row, assignment, ls_assign_mlist, ref_stage_col):
     col1, col2 = st.columns([2, 1])
 
     with col1:
@@ -474,7 +475,7 @@ def render_conflict_details(row, assignment, ls_assign_mlist):
         st.write(f"**Substation:** {substation_name}")
         st.write(f"**Zone:** {row.get('Zone', 'N/A')}")
         st.write(f"**Assignment:** {assignment}")
-        st.write(f"**Simulator Stage:** {row.get(SIM_STAGE, 'N/A')}")
+        st.write(f"**Simulator Stage:** {row.get(ref_stage_col, 'N/A')}")
         st.write(f"**Load:** {row.get('Load (MW)', 'N/A')} MW")
 
     with col2:

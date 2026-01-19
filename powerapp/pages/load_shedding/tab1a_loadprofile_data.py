@@ -23,7 +23,7 @@ def loadprofile_table():
 
     with col1:
         search_query = st.text_input(
-            label="Search for a Keyword:",
+            label="Search for a Keyword",
             placeholder="Enter your search term here...",
             key="search_box",
         )
@@ -43,7 +43,7 @@ def loadprofile_table():
                     st.info("No data found matching your filters.")
             else:
                 rows_to_display = st.slider(
-                    "Select number of rows to display:",
+                    "Select number of rows to display",
                     min_value=1,
                     max_value=max_rows,
                     value=min(5, max_rows),

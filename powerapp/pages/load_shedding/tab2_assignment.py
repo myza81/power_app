@@ -11,7 +11,8 @@ from applications.load_shedding.helper import (
 )
 from applications.data_processing.read_data import df_search_filter
 from applications.data_processing.save_to import export_to_excel
-from pages.load_shedding.tab4_simulator import display_conflicts
+
+# from pages.load_shedding.tab3c_flag_assignment import ls_assignment_flag
 from pages.load_shedding.helper import show_temporary_message
 from pages.load_shedding.helper import create_donut_chart
 from css.streamlit_css import custom_metric
@@ -23,8 +24,6 @@ def process_display_data(
     """Handles the merging and grouping logic for the main table."""
 
     df_merged = pd.merge(searched_df, pocket_relay, on="assignment_id", how="left")
-    # st.dataframe(pocket_relay)
-    # st.dataframe(df_merged)
 
     mappings = {
         "Zone": "zone",
@@ -75,7 +74,7 @@ def loadshedding_assignment() -> None:
     filter_container = st.container()
     dataframe_container = st.container()
     export_btn_container = st.container()
-    alarm_container = st.container()
+    st.divider()
     metrics_container = st.container()
 
     # 3. Filter Logic
@@ -157,9 +156,6 @@ def loadshedding_assignment() -> None:
 
         filtered_data = ls_obj.filtered_data(filters=filters, df=masterlist)
 
-        # st.markdown("filtered_data")
-        # st.dataframe(masterlist)
-
         if filtered_data.empty:
             st.info("No active load shedding assignment found.")
             return
@@ -167,7 +163,7 @@ def loadshedding_assignment() -> None:
         searched_df = pd.DataFrame()
         with c8:
             search_query = st.text_input(
-                "Search:", placeholder="Enter keyword...", key="ls_search"
+                "Search", placeholder="Enter keyword...", key="ls_search"
             )
             searched_df = df_search_filter(filtered_data, search_query)
 
@@ -236,12 +232,6 @@ def loadshedding_assignment() -> None:
                 st.info(
                     f"No active load shedding {scheme} assignment found for the selected filters."
                 )
-    # 6. Alarm / Conflict Section
-    with alarm_container:
-        # display_conflicts(view_df, ls_obj)
-        pass
-
-    st.divider()
 
     # 6. Metrics and Charts
     with metrics_container:
