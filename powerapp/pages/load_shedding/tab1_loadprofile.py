@@ -27,11 +27,16 @@ def loadprofile_dashboard():
             key=f"pie_zone_grid_load_profile",
             annotations=f"{total_mw:,.0f} MW",
             height=300,
-            margin=dict(t=80, b=20, l=10, r=10)
+            margin=dict(t=80, b=20, l=10, r=10),
         )
-    
+
     with col_stateBar:
-        states = load_df[["state", "Load (MW)"]].groupby("state").agg({"Load (MW)": "sum"}).reset_index()
+        states = (
+            load_df[["state", "Load (MW)"]]
+            .groupby("state")
+            .agg({"Load (MW)": "sum"})
+            .reset_index()
+        )
         create_bar_chart(
             df=states,
             x_col="state",
@@ -40,14 +45,14 @@ def loadprofile_dashboard():
             y_label="Demand (MW)",
             height=400,
             color_discrete_sequence=["#26b41f"],
-            key=f"state_load_demand"
+            key=f"state_load_demand",
         )
 
     with col_metrics:
         st.markdown("")
         custom_metric(
             label="Maximum Demand (MD)",
-            value=f"{total_mw:,.0f} MW",
+            value1=f"{total_mw:,.0f} MW",
         )
         st.markdown("")
         for z in load_df["zone"].unique():

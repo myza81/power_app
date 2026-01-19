@@ -7,7 +7,7 @@ from pages.load_shedding.tab4a_sim_conflict import conflict_assignment
 from applications.load_shedding.helper import scheme_col_sorted
 from css.streamlit_css import custom_metric
 
-SIM_STAGE = "Sim. Oper. Stage"
+SIM_STAGE = "Sim. Stage"
 
 
 def simulator():
@@ -139,7 +139,7 @@ def simulator():
     result_container = st.container()
 
     with editor_container:
-        editor_table, metrics = st.columns([3, 1])
+        editor_table, _, metrics = st.columns([3, 0.01, 1.2])
 
         with editor_table:
             cols_to_show = ["Zone", "Assignment", review_year,
@@ -150,7 +150,7 @@ def simulator():
                 subset_df,
                 key=editor_key,
                 hide_index=True,
-                width='stretch',
+                width="stretch",
                 column_config={
                     SIM_STAGE: st.column_config.SelectboxColumn(
                         SIM_STAGE,
@@ -172,7 +172,7 @@ def simulator():
 
             with save_sim:
                 st.button(
-                    label="💾 Save Simulator Data",
+                    label="💾 Save",
                     # on_click=save_sim_data,
                     # args=(sim_df, save_sim_key),
                     key=f"save_sim_{review_year}",
@@ -181,7 +181,7 @@ def simulator():
 
             with reset_sim:
                 st.button(
-                    label="🔄 Reset Simulator",
+                    label="🔄 Reset",
                     on_click=reset_to_base_reference,
                     args=(master_df, sim_key),
                     key=f"reset_to_base_{review_year}",
@@ -190,7 +190,7 @@ def simulator():
 
             with empty_sim:
                 st.button(
-                    label="🧹 Empty Simulator",
+                    label="🧹 Clear",
                     on_click=reset_to_empty_sim_df,
                     args=(sim_df, sim_key),
                     key=f"reset_to_empty_{review_year}",
@@ -267,7 +267,8 @@ def display_simulation_metrics(sim_df, raw_candidate, lprofile_obj, review_year)
         # Display metric
         custom_metric(
             label=f"{oper_stage.title()} Quantum:",
-            value=f"{quantum_val:,.0f} MW <span style='font-size: 14px;'>({pct:,.1f}% of {grid_load:,.0f}MW)</span>",
+            value1=f"{quantum_val:,.0f}MW",
+            value2=f"<span style='font-size: 14px;'>({pct:,.1f}% of {grid_load:,.0f}MW)</span>",
         )
 
         st.markdown("**Zone Breakdown:**")
@@ -284,7 +285,7 @@ def display_simulation_metrics(sim_df, raw_candidate, lprofile_obj, review_year)
             st.markdown(
                 f'<span style="color: inherit; font-size: 14px; font-weight: 400">{zone}: </span>'
                 f'<span style="color: inherit; font-size: 16px; font-weight: 600">'
-                f'{mw_zone_stg:,.0f} MW ({zone_load_pct:,.1f}% of {zone_load:,.0f}MW)</span>',
+                f'{mw_zone_stg:,.0f}MW ({zone_load_pct:,.1f}% of {zone_load:,.0f}MW)</span>',
                 unsafe_allow_html=True,
             )
 

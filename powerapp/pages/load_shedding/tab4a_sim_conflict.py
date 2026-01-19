@@ -3,6 +3,7 @@ import numpy as np
 import streamlit as st
 from pages.load_shedding.helper import find_latest_assignment
 
+SIM_STAGE = "Sim. Stage"
 
 def _join_warning(row):
     parts = [p for p in row if p]
@@ -19,7 +20,7 @@ def raise_flags(df, ls_latest_cols, sim_scheme):
 
     # 1. Logic for Overlap Detection
     if sim_scheme == 'UFLS':
-        stage_mask = df['Sim. Oper. Stage'].isin(nonOverlap_ufls_stages)
+        stage_mask = df[SIM_STAGE].isin(nonOverlap_ufls_stages)
         has_values_mask = df[ls_latest_cols].notna().any(axis=1)
     else:
         ufls_cols = [col for col in ls_latest_cols if col.startswith(
@@ -28,7 +29,7 @@ def raise_flags(df, ls_latest_cols, sim_scheme):
             return df
 
         stage_mask = df[ufls_cols[0]].isin(nonOverlap_ufls_stages)
-        has_values_mask = df['Sim. Oper. Stage'].notna()
+        has_values_mask = df[SIM_STAGE].notna()
 
     overlap = stage_mask & has_values_mask
 
@@ -45,12 +46,12 @@ def raise_flags(df, ls_latest_cols, sim_scheme):
 
     # 3. Critical Check
     critical_mask = (
-        df['Sim. Oper. Stage'].isin(critical_ufls_stages) &
+        df[SIM_STAGE].isin(critical_ufls_stages) &
         df["Critical Subs"].str.contains("Yes", na=False)
     )
 
     alert_critical = (
-        df['Sim. Oper. Stage'].isin(noncritical_ufls_stages) &
+        df[SIM_STAGE].isin(noncritical_ufls_stages) &
         df["Critical Subs"].str.contains("Yes", na=False)
     )
 

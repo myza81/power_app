@@ -7,6 +7,8 @@ from applications.load_shedding.ufls_setting import UFLS_TARGET_QUANTUM
 from applications.load_shedding.uvls_setting import UVLS_TARGET_QUANTUM
 from css.streamlit_css import custom_metric
 
+SIM_STAGE = "Sim. Stage"
+
 
 def sim_dashboard(simulator_df, candidate_df, scheme):
     st.subheader("📊 Load Shedding Assignment Simulator")
@@ -35,7 +37,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
     sim_ls = pd.merge(
         candidate_df,
-        simulator[["assignment_id", "Sim. Oper. Stage"]],
+        simulator[["assignment_id", SIM_STAGE]],
         on="assignment_id",
         how="left"
     ).rename(columns={"Load (MW)": "Load Shed (MW)"})
@@ -54,7 +56,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
         st.markdown("**📈 By Stage**")
 
         # Group by stage
-        sim_stage = sim_ls.groupby(["Sim. Oper. Stage"], as_index=False)[
+        sim_stage = sim_ls.groupby([SIM_STAGE], as_index=False)[
             "Load Shed (MW)"].sum()
 
         if not sim_stage.empty:
@@ -72,7 +74,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
             # Sort by stage
             ls_table = scheme_col_sorted(
-                sim_stage, "Sim. Oper. Stage")
+                sim_stage, SIM_STAGE)
 
             # Display with formatting
             display_df = ls_table.style.format({
@@ -100,7 +102,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
         # Group by zone and stage
         sim_zone_stage = sim_ls.groupby(
-            ["zone", "Sim. Oper. Stage"], as_index=False
+            ["zone", SIM_STAGE], as_index=False
         ).agg({"Load Shed (MW)": "sum"})
 
         if not sim_zone_stage.empty:
@@ -123,8 +125,8 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
             )
 
             # Sort and select columns
-            sim_zone = scheme_col_sorted(sim_merged, "Sim. Oper. Stage")[
-                ["Sim. Oper. Stage", "zone",
+            sim_zone = scheme_col_sorted(sim_merged, SIM_STAGE)[
+                [SIM_STAGE, "zone",
                     "Load Shed (MW)", "% of Zone Load"]
             ]
 
@@ -147,15 +149,15 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
         # System metrics
         custom_metric(
-            "Simulator Total Quantum",
-            f"{total_shed_stage:,.0f} MW",
-            f"{(total_shed_stage/total_system_mw)*100:.1f}% of System Load",
+            label="Simulator Total Quantum",
+            value1=f"{total_shed_stage:,.0f} MW",
+            value2=f"{(total_shed_stage/total_system_mw)*100:.1f}% of System Load",
         )
 
         custom_metric(
-            "Target Quantum",
-            f"{target_quantum_ls:,.0f} MW",
-            f"{target_quantum*100}% of System Load",
+            label="Target Quantum",
+            value1=f"{target_quantum_ls:,.0f} MW",
+            value2=f"{target_quantum*100}% of System Load",
         )
 
         achievement = (total_shed_stage / target_quantum_ls *
@@ -167,7 +169,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
         custom_metric(
             label="Target Achievement",
-            value=f"{achievement:.1f}%",
+            value1=f"{achievement:.1f}%",
             value_color=value_color,
             delta_text=f"{total_shed_stage:,.0f} / {target_quantum_ls:,.0f} MW",
             delta_color=delta_color,
@@ -202,7 +204,7 @@ def sim_dashboard(simulator_df, candidate_df, scheme):
 
                     custom_metric(
                         label=f"{zone}",
-                        value=f"{zone_total_shed:,.0f} MW",
+                        value1=f"{zone_total_shed:,.0f} MW",
                         delta_text=f"{percentage:.1f}% of zone load",
                     )
 
