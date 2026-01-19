@@ -10,8 +10,8 @@ def ls_analytics():
 
     chart_container = st.container()
     table_container = st.container()
-    st.divider()
     flag_container = st.container()
+
 
     ls_obj = st.session_state.get("loadshedding")
 
@@ -57,7 +57,7 @@ def ls_analytics():
             st.info("No active load shedding assignment found.")
             return
 
-        # 4. Processing Schemes
+        # Processing Schemes
         expected_cols = [f"{s}_{review_year}" for s in active_schemes]
         available_cols = [col for col in expected_cols if col in filtered_data.columns]
         missing_cols = set(expected_cols) - set(available_cols)
@@ -68,13 +68,15 @@ def ls_analytics():
             if not clean_scheme_df.empty:
                 lshedding_barStacked(clean_scheme_df, target_col)
                 ls_table(clean_scheme_df, target_col)
+                st.divider()
             else:
                 st.warning(f"Data for {target_col} is empty after filtering.")
 
-        # 5. Handle Missing Data
+        # Handle Missing Data
         if missing_cols:
             for col in sorted(missing_cols):
                 st.info(f"No active assignment found for {col.replace('_', ' ')}.")
 
     with flag_container:
         ls_assignment_flag()
+        st.divider()

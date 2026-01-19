@@ -288,3 +288,47 @@ def custom_table(table_title, table_content):
         """,
         unsafe_allow_html=True
     )
+
+def process_display_data(
+    searched_df: pd.DataFrame, pocket_relay: pd.DataFrame, scheme_cols: List[str]
+) -> pd.DataFrame:
+    """Handles the merging and grouping logic for the main table."""
+
+    df_merged = pd.merge(searched_df, pocket_relay,
+                         on="assignment_id", how="left")
+
+    mappings = {
+        "Zone": "zone",
+        "State": "state",
+        "Subzone": "gm_subzone",
+        "Mnemonic": "mnemonic",
+        "Substation": "substation_name",
+        "Breaker(s)": "breaker_id",
+        "Feeder Assignment": "feeder_id",
+        "Voltage Level": "kV",
+    }
+
+    for display_col, raw_col in mappings.items():
+        if display_col in df_merged.columns:
+            df_merged[display_col] = df_merged[display_col].fillna(
+                df_merged[raw_col])
+        else:
+            df_merged[display_col] = df_merged[raw_col]
+
+    group_cols = scheme_cols + [
+        "Substation",
+        "Mnemonic",
+        "assignment_id",
+        "dp_type",
+    ]
+    agg_map = {
+        "Zone": lambda x: ", ".join(x.astype(str).unique()),
+        "Subzone": lambda x: ", ".join(x.astype(str).unique()),
+        "State": lambda x: ", ".join(x.astype(str).unique()),
+        "Breaker(s)": lambda x: ", ".join(x.astype(str).unique()),
+        "Feeder Assignment": lambda x: ", ".join(x.astype(str).unique()),
+        "Voltage Level": lambda x: ", ".join(x.astype(str).unique()),
+    }
+
+    return df_merged.groupby(group_cols, as_index=False, dropna=False).agg(agg_map)
+

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from datetime import date
-from typing import List, Dict, Any
+# from typing import List, Dict, Any
 
 from applications.load_shedding.helper import (
     columns_list,
@@ -11,229 +11,195 @@ from applications.load_shedding.helper import (
 )
 from applications.data_processing.read_data import df_search_filter
 from applications.data_processing.save_to import export_to_excel
-
-# from pages.load_shedding.tab3c_flag_assignment import ls_assignment_flag
-from pages.load_shedding.helper import show_temporary_message
-from pages.load_shedding.helper import create_donut_chart
+from pages.load_shedding.tab2a_assign_compare import ls_assignment_comparison
+from pages.load_shedding.helper import show_temporary_message, create_donut_chart, process_display_data
 from css.streamlit_css import custom_metric
-
-
-def process_display_data(
-    searched_df: pd.DataFrame, pocket_relay: pd.DataFrame, scheme_cols: List[str]
-) -> pd.DataFrame:
-    """Handles the merging and grouping logic for the main table."""
-
-    df_merged = pd.merge(searched_df, pocket_relay, on="assignment_id", how="left")
-
-    mappings = {
-        "Zone": "zone",
-        "State": "state",
-        "Subzone": "gm_subzone",
-        "Mnemonic": "mnemonic",
-        "Substation": "substation_name",
-        "Breaker(s)": "breaker_id",
-        "Feeder Assignment": "feeder_id",
-        "Voltage Level": "kV",
-    }
-
-    for display_col, raw_col in mappings.items():
-        if display_col in df_merged.columns:
-            df_merged[display_col] = df_merged[display_col].fillna(df_merged[raw_col])
-        else:
-            df_merged[display_col] = df_merged[raw_col]
-
-    group_cols = scheme_cols + [
-        "Substation",
-        "Mnemonic",
-        "assignment_id",
-        "dp_type",
-    ]
-    agg_map = {
-        "Zone": lambda x: ", ".join(x.astype(str).unique()),
-        "Subzone": lambda x: ", ".join(x.astype(str).unique()),
-        "State": lambda x: ", ".join(x.astype(str).unique()),
-        "Breaker(s)": lambda x: ", ".join(x.astype(str).unique()),
-        "Feeder Assignment": lambda x: ", ".join(x.astype(str).unique()),
-        "Voltage Level": lambda x: ", ".join(x.astype(str).unique()),
-    }
-
-    return df_merged.groupby(group_cols, as_index=False, dropna=False).agg(agg_map)
 
 
 def loadshedding_assignment() -> None:
     st.subheader("Load Shedding Assignment")
 
-    # 1. State Initialization
+    # Layout
+    assignment_container = st.container()
+    st.divider()
+    metrics_container = st.container()
+    st.divider()
+    assignment_comparison_container = st.container()
+
+    # State Initialization
     lprofile_obj = st.session_state["loadprofile"]
 
     ls_obj = st.session_state["loadshedding"]
     subs_metadata = ls_obj.subs_meta()
     masterlist = ls_obj.ls_assignment_masterlist()
 
-    # 2. Filters UI
-    filter_container = st.container()
-    dataframe_container = st.container()
-    export_btn_container = st.container()
-    st.divider()
-    metrics_container = st.container()
+    # Filter Logic
+    with assignment_container:
+        input_container = st.container()
+        table_container = st.container()
+        export_btn_container = st.container()
 
-    # 3. Filter Logic
-    with filter_container:
-        c1, c2, c3 = st.columns(3)
-        c4, c5, c6 = st.columns(3)
-        c7, c8, _ = st.columns(3)
+        with input_container:
+            c1, c2, c3 = st.columns(3)
+            c4, c5, c6 = st.columns(3)
+            c7, c8, _ = st.columns(3)
 
-        with c1:
-            all_dfs = [
-                ls_obj.ufls_assignment,
-                ls_obj.uvls_assignment,
-                ls_obj.emls_assignment,
-            ]
-            years = sorted(
-                {col for df in all_dfs for col in columns_list(df, ["assignment_id"])},
-                reverse=True,
-            )
-            review_year = st.selectbox("Review Year", options=years)
-
-        with c2:
-            schemes = st.multiselect(
-                "Scheme", options=ls_obj.LOADSHED_SCHEME, default="UFLS"
-            )
-
-        with c3:
-            zones = st.multiselect(
-                "Zone",
-                options=ls_obj.ls_assignment_masterlist()["zone"].dropna().unique(),
-            )
-
-        with c4:
-            subzone_list = column_data_list(
-                subs_metadata,
-                "gm_subzone",
-            )
-            subzone = st.multiselect(
-                label="Grid Maintenace Subzone", options=subzone_list
-            )
-
-        with c5:
-            state_list = [
-                str(s)
-                for s in subs_metadata["state"].dropna().unique()
-                if str(s).strip().lower() not in ["nan", ""]
-            ]
-            state = st.multiselect(
-                label="State",
-                options=state_list,
-            )
-
-        with c6:
-            stage_opts = ls_obj.ufls_setting.columns.tolist()
-            if len(schemes) == 1:
-                if schemes[0] == "UVLS":
-                    stage_opts = ls_obj.uvls_setting.columns.tolist()
-                elif schemes[0] == "EMLS":
-                    stage_opts = []
-            stages = st.multiselect("Operating Stage", options=stage_opts)
-
-        with c7:
-            dp_type_list = (
-                masterlist["dp_type"].replace([""], np.nan).dropna().unique().tolist()
-            )
-            dp_type = st.multiselect(
-                label="Tripping Assignment",
-                options=dp_type_list,
-            )
-
-        filters = {
-            "review_year": review_year,
-            "scheme": schemes,
-            "op_stage": stages,
-            "zone": zones,
-            "state": state,
-            "gm_subzone": subzone,
-            "dp_type": dp_type,
-        }
-
-        filtered_data = ls_obj.filtered_data(filters=filters, df=masterlist)
-
-        if filtered_data.empty:
-            st.info("No active load shedding assignment found.")
-            return
-
-        searched_df = pd.DataFrame()
-        with c8:
-            search_query = st.text_input(
-                "Search", placeholder="Enter keyword...", key="ls_search"
-            )
-            searched_df = df_search_filter(filtered_data, search_query)
-
-        available_schemes = [
-            f"{ls}_{review_year}"
-            for ls in schemes
-            if f"{ls}_{review_year}" in filtered_data.columns
-        ]
-
-        missing_scheme = set([f"{ls}_{review_year}" for ls in schemes]).difference(
-            set(filtered_data.columns)
-        )
-
-    # 4. Data Display
-    with dataframe_container:
-        if not searched_df.empty:
-
-            df_display = process_display_data(
-                searched_df, ls_obj.pocket_relay(), available_schemes
-            )
-
-            df_display = scheme_col_sorted(
-                df_display, set(available_schemes), ["assignment_id"]
-            )
-            cols_order = available_schemes + [
-                "Zone",
-                "Subzone",
-                "State",
-                "Mnemonic",
-                "Substation",
-                "Voltage Level",
-                "Breaker(s)",
-                "Feeder Assignment",
-                "assignment_id",
-                "dp_type",
-            ]
-            st.dataframe(
-                df_display.reindex(columns=cols_order), width="stretch", hide_index=True
-            )
-
-    # 5. Export Section
-    with export_btn_container:
-        c10, _, _ = st.columns([3, 1, 2])
-
-        with c10:
-            filename_input, export_btn = st.columns([6, 3])
-
-            with filename_input:
-                filename = st.text_input(
-                    label="Filename",
-                    value=f"{'_'.join(available_schemes)}_LS_Assignment_{date.today().strftime('%d%m%Y')}",
-                    label_visibility="collapsed",
+            with c1:
+                all_dfs = [
+                    ls_obj.ufls_assignment,
+                    ls_obj.uvls_assignment,
+                    ls_obj.emls_assignment,
+                ]
+                years = sorted(
+                    {col for df in all_dfs for col in columns_list(
+                        df, ["assignment_id"])},
+                    reverse=True,
                 )
-            with export_btn:
-                save_btn = st.download_button(
-                    label="Export to Excel",
-                    data=export_to_excel(df_display),
-                    file_name=f"{filename}.xlsx",
-                    width="stretch",
-                )
-                if save_btn:
-                    show_temporary_message("info", f"Saved as {filename}.xlsx")
+                review_year = st.selectbox("Review Year", options=years)
 
-        if missing_scheme:
-            for scheme in missing_scheme:
-                st.info(
-                    f"No active load shedding {scheme} assignment found for the selected filters."
+            with c2:
+                schemes = st.multiselect(
+                    "Scheme", options=ls_obj.LOADSHED_SCHEME, default="UFLS"
                 )
 
-    # 6. Metrics and Charts
+            with c3:
+                zones = st.multiselect(
+                    "Zone",
+                    options=ls_obj.ls_assignment_masterlist()[
+                        "zone"].dropna().unique(),
+                )
+
+            with c4:
+                subzone_list = column_data_list(
+                    subs_metadata,
+                    "gm_subzone",
+                )
+                subzone = st.multiselect(
+                    label="Grid Maintenace Subzone", options=subzone_list
+                )
+
+            with c5:
+                state_list = [
+                    str(s)
+                    for s in subs_metadata["state"].dropna().unique()
+                    if str(s).strip().lower() not in ["nan", ""]
+                ]
+                state = st.multiselect(
+                    label="State",
+                    options=state_list,
+                )
+
+            with c6:
+                stage_opts = ls_obj.ufls_setting.columns.tolist()
+                if len(schemes) == 1:
+                    if schemes[0] == "UVLS":
+                        stage_opts = ls_obj.uvls_setting.columns.tolist()
+                    elif schemes[0] == "EMLS":
+                        stage_opts = []
+                stages = st.multiselect("Operating Stage", options=stage_opts)
+
+            with c7:
+                dp_type_list = (
+                    masterlist["dp_type"].replace(
+                        [""], np.nan).dropna().unique().tolist()
+                )
+                dp_type = st.multiselect(
+                    label="Tripping Assignment",
+                    options=dp_type_list,
+                )
+
+            filters = {
+                "review_year": review_year,
+                "scheme": schemes,
+                "op_stage": stages,
+                "zone": zones,
+                "state": state,
+                "gm_subzone": subzone,
+                "dp_type": dp_type,
+            }
+
+            filtered_data = ls_obj.filtered_data(
+                filters=filters, df=masterlist)
+
+            if filtered_data.empty:
+                st.info("No active load shedding assignment found.")
+                return
+
+            searched_df = pd.DataFrame()
+            with c8:
+                search_query = st.text_input(
+                    "Search", placeholder="Enter keyword...", key="ls_search"
+                )
+                searched_df = df_search_filter(filtered_data, search_query)
+
+            available_schemes = [
+                f"{ls}_{review_year}"
+                for ls in schemes
+                if f"{ls}_{review_year}" in filtered_data.columns
+            ]
+
+            missing_scheme = set([f"{ls}_{review_year}" for ls in schemes]).difference(
+                set(filtered_data.columns)
+            )
+
+        # Data Display
+        with table_container:
+            if not searched_df.empty:
+
+                df_display = process_display_data(
+                    searched_df, ls_obj.pocket_relay(), available_schemes
+                )
+
+                df_display = scheme_col_sorted(
+                    df_display, set(available_schemes), ["dp_type", "assignment_id"], keep_nulls=True
+                )
+                cols_order = available_schemes + [
+                    "Zone",
+                    "Subzone",
+                    "State",
+                    "Mnemonic",
+                    "Substation",
+                    "Voltage Level",
+                    "Breaker(s)",
+                    "Feeder Assignment",
+                    "assignment_id",
+                    "dp_type",
+                ]
+                st.dataframe(
+                    df_display.reindex(columns=cols_order), width="stretch", hide_index=True
+                )
+
+        # Export Section
+        with export_btn_container:
+            c10, _, _ = st.columns([3, 1, 2])
+
+            with c10:
+                filename_input, export_btn = st.columns([6, 3])
+
+                with filename_input:
+                    filename = st.text_input(
+                        label="Filename",
+                        value=f"{'_'.join(available_schemes)}_LS_Assignment_{date.today().strftime('%d%m%Y')}",
+                        label_visibility="collapsed",
+                    )
+                with export_btn:
+                    save_btn = st.download_button(
+                        label="Export to Excel",
+                        data=export_to_excel(df_display),
+                        file_name=f"{filename}.xlsx",
+                        width="stretch",
+                    )
+                    if save_btn:
+                        show_temporary_message(
+                            "info", f"Saved as {filename}.xlsx")
+
+            if missing_scheme:
+                for scheme in missing_scheme:
+                    st.info(
+                        f"No active load shedding {scheme} assignment found for the selected filters."
+                    )
+
+    # Metrics and Charts
     with metrics_container:
         for ls_sch in available_schemes:
 
@@ -286,3 +252,7 @@ def loadshedding_assignment() -> None:
                     key=f"pie_dp_{ls_sch}",
                     annotations=f"{total_ls_mw:,.0f} MW",
                 )
+
+    # Assignment Comparison
+    with assignment_comparison_container:
+        ls_assignment_comparison()

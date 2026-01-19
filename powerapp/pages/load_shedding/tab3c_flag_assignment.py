@@ -24,7 +24,7 @@ def ls_assignment_flag():
     ]
 
     with input_container:
-        input1, _ = st.columns(2)
+        input1, _, _ = st.columns(3)
 
         with input1:
             review_year = st.selectbox(
@@ -61,7 +61,7 @@ def ls_assignment_flag():
 
         df = master_df.groupby(grp_cols, dropna=False).agg(agg_dict).reset_index()
 
-        df = df.rename(columns={"assignment_id": "Assignment"})
+        df = df.rename(columns={"assignment_id": "Assignment", "zone": "Zone"})
         df["Critical Subs"] = np.where(df["critical_list"].isna(), "No", "Yes")
 
         df_merge = raise_flags(df, ls_latest_cols, review_year[:4], review_year)

@@ -422,6 +422,9 @@ def render_conflict_block(rows, ls_assign_mlist, label, ref_stage_col):
 
 
 def render_conflict_details(row, assignment, ls_assign_mlist, ref_stage_col):
+    
+    display_type = "Simulator Stage" if ref_stage_col == SIM_STAGE else "Operating Stage"
+    
     col1, col2 = st.columns([2, 1])
 
     with col1:
@@ -475,7 +478,7 @@ def render_conflict_details(row, assignment, ls_assign_mlist, ref_stage_col):
         st.write(f"**Substation:** {substation_name}")
         st.write(f"**Zone:** {row.get('Zone', 'N/A')}")
         st.write(f"**Assignment:** {assignment}")
-        st.write(f"**Simulator Stage:** {row.get(ref_stage_col, 'N/A')}")
+        st.write(f"**{display_type}:** {row.get(ref_stage_col, 'N/A')}")
         st.write(f"**Load:** {row.get('Load (MW)', 'N/A')} MW")
 
     with col2:

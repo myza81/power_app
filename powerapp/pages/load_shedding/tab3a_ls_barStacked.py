@@ -34,7 +34,7 @@ def lshedding_barStacked(df, scheme):
 
     # 3. Layout: Visualization
     c1, _, c2, _, c3 = st.columns([1.8, 0.1, 1.5, 0.1, 2])
-    st.divider()
+    
     
     # Regional Zone Shedding Quantum Vs Un-Shed Quantum
     with c1:
@@ -57,7 +57,7 @@ def lshedding_barStacked(df, scheme):
             title=f"{scheme} Shedding Quantum Vs Un-Shed Quantum - by Regional Zone",
             category_order={"load_type": [
                 "Un-shed", "Shedding"]},
-            key=f"regional_load_shedding_stackedBar"
+            key=f"regional_load_shedding_stackedBar{scheme}"
         )
 
     # Regional Operating Stage
@@ -87,7 +87,7 @@ def lshedding_barStacked(df, scheme):
             color_discrete_map=dynamic_color_map,
             title=f"{scheme} Operational Staging - by Regional Zone",
             category_order={scheme: sorted_stages},
-            key=f"regional_load_shedding_staging_stackedBar"
+            key=f"regional_load_shedding_staging_stackedBar{scheme}"
         )
 
     # Regional Distribution
