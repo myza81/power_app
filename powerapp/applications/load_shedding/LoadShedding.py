@@ -1,5 +1,6 @@
 import os
 import sys
+from warnings import filters
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -52,13 +53,13 @@ class LoadShedding:
     def __init__(self, load_df: pd.DataFrame, filedir: str = "data") -> None:
         self.load_profile = load_df
 
-        self.ufls_assignment = read_ls_data(
-            get_path("assignment_ufls.xlsx", filedir))
-        self.uvls_assignment = read_ls_data(
-            get_path("assignment_uvls.xlsx", filedir))
-        self.emls_assignment = read_ls_data(
-            get_path("assignment_emls.xlsx", filedir))
+        self.ufls_filepath = get_path("assignment_ufls.xlsx", filedir)
+        self.uvls_filepath = get_path("assignment_uvls.xlsx", filedir)
+        self.emls_filepath = get_path("assignment_emls.xlsx", filedir)
 
+        self.ufls_assignment = read_ls_data(self.ufls_filepath)
+        self.uvls_assignment = read_ls_data(self.uvls_filepath)
+        self.emls_assignment = read_ls_data(self.emls_filepath)
         self.ufls_setting = pd.DataFrame(UFLS_SETTING)
         self.uvls_setting = pd.DataFrame(UVLS_SETTING)
 
@@ -84,7 +85,7 @@ class LoadShedding:
     def subs_meta(self):
         if self.substations is None:
             return pd.DataFrame()
-        
+
         self.zone_mapping = {
             "North-Perda": "North",
             "North-Ipoh": "North",
@@ -266,18 +267,15 @@ class LoadShedding:
     def filtered_data(self, filters: Dict, df: pd.DataFrame) -> pd.DataFrame:
         """Applies filtering on the loadshedding assignments based on the provided filter criteria in the 'filters' dictionary. It merges the load shedding assignments with the substation metadata for enriched filtering."""
 
-        review_year = filters.get("review_year", None)
         scheme = filters.get("scheme", None)
         op_stage = filters.get("op_stage", [])
 
-        if df is None or df.empty or review_year is None or scheme is None:
+        if df is None or df.empty or scheme is None:
             return pd.DataFrame()
 
         filtered_df = df.copy()
-
+        selected_inp_scheme = filters.get("scheme", [])
         selected_ls_cols_dict = {}
-
-        selected_inp_scheme = [f"{ls}_{review_year}" for ls in scheme]
 
         available_scheme = set(selected_inp_scheme).intersection(
             set(filtered_df.columns)

@@ -12,8 +12,13 @@ from applications.load_shedding.helper import (
 from applications.data_processing.read_data import df_search_filter
 from applications.data_processing.save_to import export_to_excel
 from pages.load_shedding.tab2a_assign_compare import ls_assignment_comparison
-from pages.load_shedding.helper import show_temporary_message, create_donut_chart, process_display_data
+from pages.load_shedding.helper import show_temporary_message, create_donut_chart, process_display_data, find_latest_assignment
 from css.streamlit_css import custom_metric
+
+
+def ls_assignment_main():
+    loadshedding_assignment()
+    ls_assignment_comparison()
 
 
 def loadshedding_assignment() -> None:
@@ -24,11 +29,9 @@ def loadshedding_assignment() -> None:
     st.divider()
     metrics_container = st.container()
     st.divider()
-    assignment_comparison_container = st.container()
 
     # State Initialization
     lprofile_obj = st.session_state["loadprofile"]
-
     ls_obj = st.session_state["loadshedding"]
     subs_metadata = ls_obj.subs_meta()
     masterlist = ls_obj.ls_assignment_masterlist()
@@ -40,36 +43,32 @@ def loadshedding_assignment() -> None:
         export_btn_container = st.container()
 
         with input_container:
-            c1, c2, c3 = st.columns(3)
-            c4, c5, c6 = st.columns(3)
-            c7, c8, _ = st.columns(3)
+            schemes_input, zones_input, subzone_input = st.columns(3)
+            state_input, oper_stg_input, dp_input = st.columns(3)
+            search_input, _, _ = st.columns(3)
 
-            with c1:
-                all_dfs = [
-                    ls_obj.ufls_assignment,
-                    ls_obj.uvls_assignment,
-                    ls_obj.emls_assignment,
+            with schemes_input:
+                ls_scheme_cols = [
+                    c for c in masterlist.columns if any(k in c for k in ls_obj.LOADSHED_SCHEME)
                 ]
-                years = sorted(
-                    {col for df in all_dfs for col in columns_list(
-                        df, ["assignment_id"])},
-                    reverse=True,
-                )
-                review_year = st.selectbox("Review Year", options=years)
 
-            with c2:
+                latest_assignment = find_latest_assignment(ls_scheme_cols)
+
+                ufls_latest = [
+                    ls for ls in latest_assignment if 'ufls' in str(ls).lower()]
+
                 schemes = st.multiselect(
-                    "Scheme", options=ls_obj.LOADSHED_SCHEME, default="UFLS"
+                    "Scheme", options=ls_scheme_cols, default=ufls_latest[0]
                 )
 
-            with c3:
+            with zones_input:
                 zones = st.multiselect(
                     "Zone",
                     options=ls_obj.ls_assignment_masterlist()[
                         "zone"].dropna().unique(),
                 )
 
-            with c4:
+            with subzone_input:
                 subzone_list = column_data_list(
                     subs_metadata,
                     "gm_subzone",
@@ -78,7 +77,7 @@ def loadshedding_assignment() -> None:
                     label="Grid Maintenace Subzone", options=subzone_list
                 )
 
-            with c5:
+            with state_input:
                 state_list = [
                     str(s)
                     for s in subs_metadata["state"].dropna().unique()
@@ -89,7 +88,7 @@ def loadshedding_assignment() -> None:
                     options=state_list,
                 )
 
-            with c6:
+            with oper_stg_input:
                 stage_opts = ls_obj.ufls_setting.columns.tolist()
                 if len(schemes) == 1:
                     if schemes[0] == "UVLS":
@@ -98,7 +97,7 @@ def loadshedding_assignment() -> None:
                         stage_opts = []
                 stages = st.multiselect("Operating Stage", options=stage_opts)
 
-            with c7:
+            with dp_input:
                 dp_type_list = (
                     masterlist["dp_type"].replace(
                         [""], np.nan).dropna().unique().tolist()
@@ -109,7 +108,6 @@ def loadshedding_assignment() -> None:
                 )
 
             filters = {
-                "review_year": review_year,
                 "scheme": schemes,
                 "op_stage": stages,
                 "zone": zones,
@@ -126,34 +124,23 @@ def loadshedding_assignment() -> None:
                 return
 
             searched_df = pd.DataFrame()
-            with c8:
+            with search_input:
                 search_query = st.text_input(
                     "Search", placeholder="Enter keyword...", key="ls_search"
                 )
                 searched_df = df_search_filter(filtered_data, search_query)
 
-            available_schemes = [
-                f"{ls}_{review_year}"
-                for ls in schemes
-                if f"{ls}_{review_year}" in filtered_data.columns
-            ]
-
-            missing_scheme = set([f"{ls}_{review_year}" for ls in schemes]).difference(
-                set(filtered_data.columns)
-            )
-
         # Data Display
         with table_container:
             if not searched_df.empty:
-
                 df_display = process_display_data(
-                    searched_df, ls_obj.pocket_relay(), available_schemes
+                    searched_df, ls_obj.pocket_relay(), schemes
                 )
 
                 df_display = scheme_col_sorted(
-                    df_display, set(available_schemes), ["dp_type", "assignment_id"], keep_nulls=True
+                    df_display, set(schemes), ["dp_type", "assignment_id"], keep_nulls=True
                 )
-                cols_order = available_schemes + [
+                cols_order = schemes + [
                     "Zone",
                     "Subzone",
                     "State",
@@ -168,44 +155,40 @@ def loadshedding_assignment() -> None:
                 st.dataframe(
                     df_display.reindex(columns=cols_order), width="stretch", hide_index=True
                 )
+            else:
+                st.info("No active load shedding assignment found.")
+                return
 
         # Export Section
         with export_btn_container:
-            c10, _, _ = st.columns([3, 1, 2])
+            if not searched_df.empty:
+                c10, _, _ = st.columns([3, 1, 2])
 
-            with c10:
-                filename_input, export_btn = st.columns([6, 3])
+                with c10:
+                    filename_input, export_btn = st.columns([6, 3])
 
-                with filename_input:
-                    filename = st.text_input(
-                        label="Filename",
-                        value=f"{'_'.join(available_schemes)}_LS_Assignment_{date.today().strftime('%d%m%Y')}",
-                        label_visibility="collapsed",
-                    )
-                with export_btn:
-                    save_btn = st.download_button(
-                        label="Export to Excel",
-                        data=export_to_excel(df_display),
-                        file_name=f"{filename}.xlsx",
-                        width="stretch",
-                    )
-                    if save_btn:
-                        show_temporary_message(
-                            "info", f"Saved as {filename}.xlsx")
-
-            if missing_scheme:
-                for scheme in missing_scheme:
-                    st.info(
-                        f"No active load shedding {scheme} assignment found for the selected filters."
-                    )
+                    with filename_input:
+                        filename = st.text_input(
+                            label="Filename",
+                            value=f"{'_'.join(schemes)}_LS_Assignment_{date.today().strftime('%d%m%Y')}",
+                            label_visibility="collapsed",
+                        )
+                    with export_btn:
+                        save_btn = st.download_button(
+                            label="Export to Excel",
+                            data=export_to_excel(df_display),
+                            file_name=f"{filename}.xlsx",
+                            width="stretch",
+                        )
+                        if save_btn:
+                            show_temporary_message(
+                                "info", f"Saved as {filename}.xlsx")
 
     # Metrics and Charts
     with metrics_container:
-        for ls_sch in available_schemes:
-
+        for ls_sch in schemes:
             col_pie1, col_pie2, col_metrics = st.columns([2, 2, 2])
 
-            # Data Prep for charts
             plot_df = filtered_data.copy()
             plot_df[ls_sch] = plot_df[ls_sch].replace("nan", np.nan)
 
@@ -254,5 +237,5 @@ def loadshedding_assignment() -> None:
                 )
 
     # Assignment Comparison
-    with assignment_comparison_container:
-        ls_assignment_comparison()
+    # with assignment_comparison_container:
+    #     ls_assignment_comparison()

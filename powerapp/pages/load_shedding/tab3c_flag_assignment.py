@@ -27,15 +27,15 @@ def ls_assignment_flag():
         input1, _, _ = st.columns(3)
 
         with input1:
-            review_year = st.selectbox(
-                "Base Reference", options=scheme_cols, key="analytic_flag_review_year"
+            scheme = st.selectbox(
+                "Scheme", options=scheme_cols, key="analytic_flag_scheme"
             )
 
         lshedding_columns = [
             col
             for col in master_df.columns
             if any(k in col for k in ls_obj.LOADSHED_SCHEME)
-            and not col.startswith(review_year[:4])
+            and not col.startswith(scheme[:4])
         ]
 
         ls_latest_cols = find_latest_assignment(lshedding_columns)
@@ -64,7 +64,7 @@ def ls_assignment_flag():
         df = df.rename(columns={"assignment_id": "Assignment", "zone": "Zone"})
         df["Critical Subs"] = np.where(df["critical_list"].isna(), "No", "Yes")
 
-        df_merge = raise_flags(df, ls_latest_cols, review_year[:4], review_year)
+        df_merge = raise_flags(df, ls_latest_cols, scheme[:4], scheme)
 
     with alarm_container:
-        display_conflicts(df_merge, ls_obj, ref_stage_col=review_year)
+        display_conflicts(df_merge, ls_obj, ref_stage_col=scheme)

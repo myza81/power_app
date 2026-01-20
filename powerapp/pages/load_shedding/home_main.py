@@ -3,8 +3,8 @@ from applications.data_processing.read_data import read_raw_data
 from applications.load_shedding.LoadShedding import LoadShedding
 from applications.load_shedding.LoadProfile import LoadProfile
 from pages.load_shedding.tab1_loadprofile import loadprofile_main
-from pages.load_shedding.tab2_assignment import loadshedding_assignment
-from pages.load_shedding.tab3_analytics import ls_analytics
+from pages.load_shedding.tab2_assignment import ls_assignment_main
+from pages.load_shedding.tab3_analytics import ls_analytics_main
 from pages.load_shedding.tab4_simulator import simulator
 from pages.load_shedding.tab5_critical_list import critical_list
 
@@ -46,10 +46,10 @@ if load_profile_uploader is not None:
         loadprofile_main()
 
     with tab2:
-        loadshedding_assignment()
+        ls_assignment_main()
 
     with tab3:
-        ls_analytics()
+        ls_analytics_main()
 
     with tab4:
         simulator()

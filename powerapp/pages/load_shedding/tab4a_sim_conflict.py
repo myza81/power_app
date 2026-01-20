@@ -40,6 +40,7 @@ def raise_flags(df, ls_latest_cols, ref_scheme, ref_stage_col):
             for col in ls_latest_cols
             if col.startswith("UFLS") and col in df.columns
         ]
+
         if not ufls_cols:
             return df
 
@@ -80,17 +81,20 @@ def raise_flags(df, ls_latest_cols, ref_scheme, ref_stage_col):
     # Update only those that meet the flag_mask
     if flag_warning_mask.any():
         conflict_info = (
-            df.loc[flag_warning_mask, "conflict_assignment"].fillna("").str.strip()
+            df.loc[flag_warning_mask, "conflict_assignment"].fillna(
+                "").str.strip()
         )
 
-        critical_info = np.where(critical_mask[flag_warning_mask], "[Critical Sub]", "")
+        critical_info = np.where(
+            critical_mask[flag_warning_mask], "[Critical Sub]", "")
 
         df.loc[flag_warning_mask, "Flag"] = pd.DataFrame(
             {"a": conflict_info, "b": critical_info}
         ).apply(_join_warning, axis=1)
 
     if flag_alert_mask.any():
-        alert_info = np.where(alert_critical[flag_alert_mask], "[Critical Sub]", "")
+        alert_info = np.where(
+            alert_critical[flag_alert_mask], "[Critical Sub]", "")
 
         df.loc[flag_alert_mask, "Flag"] = "Alert: " + alert_info
 

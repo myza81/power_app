@@ -1,9 +1,11 @@
 import time
 import textwrap
+import re
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from typing import List, Optional, Sequence, Any
+from collections import defaultdict
 from applications.load_shedding.load_profile import (
     load_profile_metric,
 )
@@ -92,28 +94,33 @@ def show_temporary_message(message_type, message, duration=3):
     placeholder.empty()
 
 
-def find_latest_assignment(data_list):
-    latest_entries = {}
-    parts = []
-    for item in data_list:
-        parts = item.split('_')
+def find_latest_assignment(ls_scheme_list):
+    # Filter: remove items with extra characters after numbers
+    pattern = r'^(\w+)_(\d+)$'  # word_numbers (nothing after numbers)
+    filtered = []
 
-        if len(parts) == 2:
-            category = parts[0]
-            try:
-                year = int(parts[1])
-            except ValueError:
-                return []
+    for item in ls_scheme_list:
+        match = re.match(pattern, item)
+        if match:
+            prefix = match.group(1)
+            number = match.group(2)
+            filtered.append((prefix, int(number), item))
 
-            if category not in latest_entries or year > latest_entries[category]['year']:
-                latest_entries[category] = {
-                    'year': year,
-                    'full_name': item
-                }
+    # Group by prefix and find max number
+    groups = defaultdict(list)
 
-    latest_selection = [entry['full_name']
-                        for entry in latest_entries.values()]
-    return latest_selection
+    for prefix, number, item in filtered:
+        groups[prefix].append((number, item))
+
+    # Get latest for each group
+    result = []
+    for prefix, items_list in sorted(groups.items()):
+        if items_list:
+            # Sort by number (descending) and get first
+            items_list.sort(key=lambda x: x[0], reverse=True)
+            result.append(items_list[0][1])
+
+    return result
 
 
 def create_donut_chart(
@@ -150,6 +157,7 @@ def create_donut_chart(
         ],
     )
     st.plotly_chart(fig, width="content", key=key)
+
 
 def create_bar_chart(
     df,
@@ -190,6 +198,7 @@ def create_bar_chart(
     )
 
     st.plotly_chart(fig, width="content", key=key)
+
 
 def create_stackedBar_chart(
     df,
@@ -256,9 +265,12 @@ def stage_sort(stage_str):
         pass
     return 999
 
+
 def join_unique_non_empty(series):
-    unique_vals = [str(v) for v in series.dropna().unique() if str(v).strip() != ""]
+    unique_vals = [str(v) for v in series.dropna().unique()
+                   if str(v).strip() != ""]
     return ", ".join(unique_vals) if unique_vals else None
+
 
 def custom_table(table_title, table_content):
     display_title = "<br>".join(textwrap.wrap(table_title, width=40))
@@ -288,6 +300,7 @@ def custom_table(table_title, table_content):
         """,
         unsafe_allow_html=True
     )
+
 
 def process_display_data(
     searched_df: pd.DataFrame, pocket_relay: pd.DataFrame, scheme_cols: List[str]
@@ -331,4 +344,3 @@ def process_display_data(
     }
 
     return df_merged.groupby(group_cols, as_index=False, dropna=False).agg(agg_map)
-

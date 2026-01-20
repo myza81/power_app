@@ -1,9 +1,11 @@
+import re
 import pandas as pd
 import numpy as np
 import streamlit as st
 from pages.load_shedding.helper import join_unique_non_empty
 from pages.load_shedding.tab4b_sim_dashboard import sim_dashboard
 from pages.load_shedding.tab4a_sim_conflict import conflict_assignment
+from pages.load_shedding.tab4c_sim_save import save_sim_data, col_sim_validation
 from applications.load_shedding.helper import scheme_col_sorted
 from css.streamlit_css import custom_metric
 
@@ -12,6 +14,12 @@ SIM_STAGE = "Sim. Stage"
 
 def simulator():
     st.subheader("Load Shedding Assignment Simulator")
+
+    input_container = st.container()
+    editor_container = st.container()
+    save_sim_container = st.container()
+    alarm_container = st.container()
+    dashboard_container = st.container()
 
     ls_obj = st.session_state.get("loadshedding")
     lprofile_obj = st.session_state.get("loadprofile")
@@ -31,112 +39,101 @@ def simulator():
         st.error("No valid load shedding scheme columns found.")
         return
 
-    c1, c2, c3 = st.columns(3)
+    with input_container:
+        c1, c2, c3 = st.columns(3)
 
-    with c1:
-        review_year = st.selectbox(
-            "Base Reference",
-            options=scheme_cols,
-            key="sim_review_year"
-        )
-
-    master_df_key = f"master_df_key_{review_year}"
-    sim_key = f"sim_data_{review_year}"
-    editor_key = f"sim_editor_{review_year}"
-    export_sim_key = f"show_export_{review_year}"
-
-    if export_sim_key not in st.session_state:
-        st.session_state[export_sim_key] = False
-
-    if master_df_key not in st.session_state:
-        valid_candidate, raw_candidate = build_master_df(ls_obj)
-        st.session_state[master_df_key] = {
-            "valid_candidate": valid_candidate,
-            "raw_candidate": raw_candidate,
-            "master_df": generate_sim_df(valid_candidate, review_year),
-        }
-
-    raw_candidate = st.session_state[master_df_key]["raw_candidate"]
-    sim_candidate = st.session_state[master_df_key]["valid_candidate"]
-    master_df = st.session_state[master_df_key]["master_df"]
-
-    if sim_key not in st.session_state:
-        st.session_state[sim_key] = {
-            "sim_df": master_df.copy(),
-            "last_editor_state": {},
-        }
-
-    sim_data = st.session_state[sim_key]
-    sim_df = sim_data["sim_df"]
-
-    # Get current editor state
-    current_editor_state = st.session_state.get(editor_key, {})
-    last_editor_state = sim_data.get("last_editor_state", {})
-
-    # Check if editor was modified
-    current_edits = current_editor_state.get("edited_rows", {})
-    last_edits = last_editor_state.get("edited_rows", {})
-
-    if current_edits != last_edits:
-        if current_edits:
-            sim_df = update_sim_df_from_editor(
-                sim_df, current_editor_state, review_year
+        with c1:
+            review_year = st.selectbox(
+                "Base Reference",
+                options=scheme_cols,
+                key="sim_review_year"
             )
 
-        sim_data["last_editor_state"] = current_editor_state.copy()
-        st.session_state[export_sim_key] = False
+            master_df_key = f"master_df_key_{review_year}"
+            sim_key = f"sim_data_{review_year}"
+            editor_key = f"sim_editor_{review_year}"
+            export_sim_key = f"show_export_{review_year}"
 
-    # Check if dataframe having conflicts
-    sim_df = conflict_assignment(
-        sim_df, sim_candidate, ls_obj, review_year, SIM_STAGE)
+            if export_sim_key not in st.session_state:
+                st.session_state[export_sim_key] = False
 
-    sim_data["sim_df"] = sim_df
+            if master_df_key not in st.session_state:
+                valid_candidate, raw_candidate = build_master_df(ls_obj)
+                st.session_state[master_df_key] = {
+                    "valid_candidate": valid_candidate,
+                    "raw_candidate": raw_candidate,
+                    "master_df": generate_sim_df(valid_candidate, review_year),
+                }
 
-    with c2:
-        zone_options = sorted(sim_df["Zone"].dropna().unique())
-        selected_zones = st.multiselect(
-            "Filter by Zone",
-            options=zone_options,
-            key=f"zone_filter_{review_year}",
+            raw_candidate = st.session_state[master_df_key]["raw_candidate"]
+            sim_candidate = st.session_state[master_df_key]["valid_candidate"]
+            master_df = st.session_state[master_df_key]["master_df"]
+
+            if sim_key not in st.session_state:
+                st.session_state[sim_key] = {
+                    "sim_df": master_df.copy(),
+                    "last_editor_state": {},
+                }
+
+            sim_data = st.session_state[sim_key]
+            sim_df = sim_data["sim_df"]
+
+            current_editor_state = st.session_state.get(editor_key, {})
+            last_editor_state = sim_data.get("last_editor_state", {})
+
+            current_edits = current_editor_state.get("edited_rows", {})
+            last_edits = last_editor_state.get("edited_rows", {})
+
+            if current_edits != last_edits:
+                if current_edits:
+                    sim_df = update_sim_df_from_editor(
+                        sim_df, current_editor_state, review_year
+                    )
+
+                sim_data["last_editor_state"] = current_editor_state.copy()
+                st.session_state[export_sim_key] = False
+
+            sim_df = conflict_assignment(
+                sim_df, sim_candidate, ls_obj, review_year, SIM_STAGE)
+
+            sim_data["sim_df"] = sim_df
+
+        with c2:
+            zone_options = sorted(sim_df["Zone"].dropna().unique())
+            selected_zones = st.multiselect(
+                "Filter by Zone",
+                options=zone_options,
+                key=f"zone_filter_{review_year}",
+            )
+
+        with c3:
+            assignment_list = sim_df["Assignment"].tolist()
+            assignment_id = st.multiselect(
+                label="Assignment Finder",
+                options=assignment_list,
+                key=f"subs_search_{review_year}",
+            )
+
+        view_df = sim_df.copy()
+        if selected_zones:
+            view_df = view_df[view_df["Zone"].isin(selected_zones)]
+
+        if assignment_id:
+            view_df = view_df[view_df["Assignment"].isin(assignment_id)]
+
+        if review_year.startswith("UFLS"):
+            stage_options = ls_obj.ufls_setting.columns.tolist()
+        elif review_year.startswith("UVLS"):
+            stage_options = ls_obj.uvls_setting.columns.tolist()
+        else:
+            stage_options = []
+
+        row_map_key = f"_row_map_{review_year}"
+        st.session_state[row_map_key] = (
+            view_df["Assignment"]
+            .reset_index(drop=True)
+            .to_dict()
         )
-
-    with c3:
-        assignment_list = sim_df["Assignment"].tolist()
-        assignment_id = st.multiselect(
-            label="Assignment Finder",
-            options=assignment_list,
-            key=f"subs_search_{review_year}",
-        )
-
-    # Prepare view DataFrame (filtered if zones selected)
-    view_df = sim_df.copy()
-    if selected_zones:
-        view_df = view_df[view_df["Zone"].isin(selected_zones)]
-
-    # Prepare view DataFrame (filtered if assignment selected)
-    if assignment_id:
-        view_df = view_df[view_df["Assignment"].isin(assignment_id)]
-
-    # Stage options for dropdown
-    if review_year.startswith("UFLS"):
-        stage_options = ls_obj.ufls_setting.columns.tolist()
-    elif review_year.startswith("UVLS"):
-        stage_options = ls_obj.uvls_setting.columns.tolist()
-    else:
-        stage_options = []
-
-    # Store row mapping for editor updates
-    row_map_key = f"_row_map_{review_year}"
-    st.session_state[row_map_key] = (
-        view_df["Assignment"]
-        .reset_index(drop=True)
-        .to_dict()
-    )
-
-    # Layout containers
-    editor_container = st.container()
-    alarm_container = st.container()
-    result_container = st.container()
 
     with editor_container:
         editor_table, _, metrics = st.columns([3, 0.01, 1.2])
@@ -168,18 +165,33 @@ def simulator():
                 },
             )
 
-            _, save_sim, reset_sim, empty_sim = st.columns([2, 2, 2, 2])
+            colname_input, save, reset, empty = st.columns(
+                [2, 1.5, 1.5, 1.5])
 
-            with save_sim:
-                st.button(
-                    label="💾 Save",
-                    # on_click=save_sim_data,
-                    # args=(sim_df, save_sim_key),
-                    key=f"save_sim_{review_year}",
-                    width='stretch',
+            with colname_input:
+                ls_colname = st.text_input(
+                    label="Filename",
+                    placeholder="Use format e.g, 2025 or 2025v1",
+                    label_visibility="collapsed",
+                    key=f"simls_colname_{review_year}",
+                    help="Enter 4-digit year (2025) for final, or add version like 2025v1 for drafts"
                 )
 
-            with reset_sim:
+            with save:
+                button_disabled = col_sim_validation(ls_colname)
+
+                st.button(
+                    label="💾 Save",
+                    disabled=button_disabled,
+                    on_click=save_sim_data,
+                    args=(sim_df, ls_colname, review_year,
+                          save_sim_container),
+                    key=f"save_sim_{review_year}",
+                    width='stretch',
+                    help="Invalid format! Please use format e.g., 2025 or 2025v1" if button_disabled else ""
+                )
+
+            with reset:
                 st.button(
                     label="🔄 Reset",
                     on_click=reset_to_base_reference,
@@ -188,7 +200,7 @@ def simulator():
                     width='stretch',
                 )
 
-            with empty_sim:
+            with empty:
                 st.button(
                     label="🧹 Clear",
                     on_click=reset_to_empty_sim_df,
@@ -204,7 +216,7 @@ def simulator():
     with alarm_container:
         display_conflicts(view_df, ls_obj, ref_stage_col=SIM_STAGE)
 
-    with result_container:
+    with dashboard_container:
         sim_dashboard(simulator_df=sim_df,
                       candidate_df=raw_candidate,
                       scheme=review_year[:4])
@@ -418,13 +430,14 @@ def render_conflict_block(rows, ls_assign_mlist, label, ref_stage_col):
             assignment = row["Assignment"]
             stage = row[ref_stage_col]
             with st.expander(f"**{assignment}** ({stage})", icon="⚠️"):
-                render_conflict_details(row, assignment, ls_assign_mlist, ref_stage_col)
+                render_conflict_details(
+                    row, assignment, ls_assign_mlist, ref_stage_col)
 
 
 def render_conflict_details(row, assignment, ls_assign_mlist, ref_stage_col):
-    
+
     display_type = "Simulator Stage" if ref_stage_col == SIM_STAGE else "Operating Stage"
-    
+
     col1, col2 = st.columns([2, 1])
 
     with col1:
