@@ -179,12 +179,14 @@ def simulator():
 
             with save:
                 button_disabled = col_sim_validation(ls_colname)
+                df_sim = sim_df[["Assignment", SIM_STAGE]]
+                df_sim = df_sim.rename(columns={"Assignment": "assignment_id", SIM_STAGE: ls_colname})
 
                 st.button(
                     label="💾 Save",
                     disabled=button_disabled,
                     on_click=save_sim_data,
-                    args=(sim_df, ls_colname, review_year,
+                    args=(df_sim, ls_colname, review_year,
                           save_sim_container),
                     key=f"save_sim_{review_year}",
                     width='stretch',

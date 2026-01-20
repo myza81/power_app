@@ -13,7 +13,7 @@ def col_sim_validation(ls_colname):
     return True
 
 
-def save_sim_data(sim_df, ls_colname, review_year, container):
+def save_sim_data(df_sim, ls_colname, review_year, container):
 
     ls_obj = st.session_state.get("loadshedding")
 
@@ -43,7 +43,7 @@ def save_sim_data(sim_df, ls_colname, review_year, container):
     column_exists = ls_colname in header
     if not column_exists:
         # New column - save directly
-        data_saved(container, excel_file, ls_colname, sim_df, file_path)
+        data_saved(container, excel_file, ls_colname, df_sim, file_path)
         return
 
     existing_ls = [col for col in header if re.match(r'^\d{4}$', col)]
@@ -68,7 +68,7 @@ def save_sim_data(sim_df, ls_colname, review_year, container):
                         type="secondary",
                         on_click=data_saved,
                         args=(container, excel_file,
-                              ls_colname, sim_df, file_path),
+                              ls_colname, df_sim, file_path),
                         key=f"save_btn_{ls_colname}",
                         width="stretch"
                     )
@@ -82,16 +82,35 @@ def save_sim_data(sim_df, ls_colname, review_year, container):
                         st.rerun()
 
 
-def data_saved(container, excel_file, ls_colname, sim_df, file_path):
+def data_saved(container, df_excel, ls_colname, df_sim, file_path):
+
+    KEY_COL = "assignment_id"
+
     try:
+        if KEY_COL not in df_sim.columns or KEY_COL not in df_excel.columns:
+            container.error(f"Missing key column: {KEY_COL}")
+            return
 
-        excel_id_map = {}
-        for idx, value in enumerate(excel_file.iloc[:, 0], start=1):
-            if pd.notna(value):
-                excel_id_map[str(value).strip()] = idx + 1
+        df_sim = df_sim.set_index(KEY_COL)
+        df_excel = df_excel.set_index(KEY_COL)
 
-        # save_sim_container.write(excel_id_map)
-        cols_to_update = [ls_colname]
+        common_cols = df_excel.columns.intersection(df_sim.columns)
+        df_excel.update(df_sim[common_cols])
+
+        new_cols = df_sim.columns.difference(df_excel.columns)
+        for col in new_cols:
+            df_excel[col] = df_sim[col]
+
+        new_keys = df_sim.index.difference(df_excel.index)
+        if not new_keys.empty:
+            df_to_append = df_sim.loc[new_keys]
+
+            df_excel = pd.concat([df_excel, df_to_append], sort=False)
+
+        df_excel_final = df_excel.dropna(
+            how='all', subset=df_excel.columns).reset_index()
+
+        df_excel_final.to_excel(file_path, index=False, engine='openpyxl')
 
         container.success(f"✅ Data saved successfully!")
 
