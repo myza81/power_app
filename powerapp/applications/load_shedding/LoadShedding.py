@@ -105,16 +105,72 @@ class LoadShedding:
 
         return df
 
+    def loadprofile_df(self):
+        if self.load_profile is None or self.subs_meta().empty:
+            return pd.DataFrame()
+
+        subs_meta_df = self.subs_meta()
+        load_profile = self.load_profile[[
+            "mnemonic", "feeder_id", "Load (MW)", "state", "zone"]].copy()
+        load_profile["state"] = load_profile["state"].str.title()
+
+        df = pd.merge(
+            subs_meta_df,
+            load_profile,
+            on=["mnemonic"],
+            how="outer",
+            suffixes=("_meta", "_profile"),
+        )
+
+        df["state_meta"] = df["state_meta"].replace('nan', np.nan)
+        df["state"] = df["state_meta"].combine_first(df["state_profile"])
+        df["zone"] = df["zone_profile"].combine_first(df["zone_meta"])
+        df = df.drop(
+            columns=["state_meta", "state_profile", "zone_meta", "zone_profile"])
+
+        mask = df["substation_name"].notna()
+        df["subs_fullname"] = df["mnemonic"].where(
+            ~mask,
+            df["mnemonic"] + " (" + df["substation_name"].fillna("") + ")"
+        )
+
+        return df
+
+    def profile_metadata(self):
+        df_raw = self.loadprofile_df()
+
+        if df_raw.empty:
+            return pd.DataFrame()
+
+        required_cols = ["state", "zone", "gm_subzone", "substation_name",
+                         "mnemonic", "subs_fullname", "coordinate"]
+
+        df = df_raw[required_cols].copy()
+        df_unique = df.drop_duplicates(
+            subset=required_cols,
+            keep='first'
+        ).reset_index(drop=True)
+
+        return df_unique
+
+    def zone_load_profile(self, zone):
+        loadprofile_df = self.loadprofile_df()
+        zone_df = loadprofile_df.loc[loadprofile_df["zone"] == zone]
+        zone_mw = zone_df["Load (MW)"].sum()
+
+        return zone_mw
+
     def load_dp(self) -> pd.DataFrame:
         if (
             self.delivery_point is None
             or self.load_profile is None
             or self.flaglist is None
-            or self.subs_meta().empty
+            or self.profile_metadata().empty
         ):
             return pd.DataFrame()
 
         delivery_point = self.delivery_point.drop_duplicates()
+        profile_metadata = self.profile_metadata().copy()
 
         df = pd.merge(
             delivery_point,
@@ -125,7 +181,7 @@ class LoadShedding:
 
         df_meta = pd.merge(
             df,
-            self.subs_meta(),
+            profile_metadata,
             on="mnemonic",
             how="left",
         )
@@ -197,12 +253,14 @@ class LoadShedding:
         return df
 
     def pocket_relay(self):
-        if self.rly_pocket is None or self.subs_meta().empty:
+        if self.rly_pocket is None or self.profile_metadata().empty:
             return pd.DataFrame()
+
+        profile_metadata = self.profile_metadata().copy()
 
         df = pd.merge(
             self.rly_pocket.astype(str),
-            self.subs_meta(),
+            profile_metadata,
             left_on="Mnemonic",
             right_on="mnemonic",
             how="left",

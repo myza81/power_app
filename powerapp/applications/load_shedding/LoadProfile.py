@@ -6,15 +6,16 @@ from applications.load_shedding.load_profile import load_profile_metric
 class LoadProfile:
     STATE_MAPPING: Dict[str, str] = {
         "LANGKAWI": "KEDAH",
-        "WPKL": "KL",
+        "WPKL": "KUALA LUMPUR",
         "TGANU": "TERENGGANU",
-        "P PINANG": "PENANG"
+        "P PINANG": "PULAU PINANG",
+        "NS": "NEGERI SEMBILAN"
     }
 
     ZONE_STRUCTURE: Dict[str, List[str]] = {
-        "North": ["Kedah", "Perlis", "Penang", "Perak"],
-        "KlangValley": ["KL", "Selangor"],
-        "South": ["NS", "Johor", "Melaka"],
+        "North": ["Kedah", "Perlis", "Pulau Pinang", "Perak"],
+        "KlangValley": ["Kuala Lumpur", "Selangor"],
+        "South": ["Negeri Sembilan", "Johor", "Melaka"],
         "East": ["Kelantan", "Terengganu", "Pahang"],
     }
 

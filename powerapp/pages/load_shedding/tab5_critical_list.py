@@ -22,7 +22,7 @@ def critical_list():
 
     with col2:
         subzone_list = column_data_list(
-            ls_obj.subs_meta(),
+            ls_obj.profile_metadata(),
             "gm_subzone",
         )
         subzones = st.multiselect(

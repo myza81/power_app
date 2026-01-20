@@ -2,8 +2,6 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 from datetime import date
-# from typing import List, Dict, Any
-
 from applications.load_shedding.helper import (
     columns_list,
     column_data_list,
@@ -31,9 +29,9 @@ def loadshedding_assignment() -> None:
     st.divider()
 
     # State Initialization
-    lprofile_obj = st.session_state["loadprofile"]
     ls_obj = st.session_state["loadshedding"]
-    subs_metadata = ls_obj.subs_meta()
+    profile_metadata = ls_obj.profile_metadata()
+
     masterlist = ls_obj.ls_assignment_masterlist()
 
     # Filter Logic
@@ -70,7 +68,7 @@ def loadshedding_assignment() -> None:
 
             with subzone_input:
                 subzone_list = column_data_list(
-                    subs_metadata,
+                    profile_metadata,
                     "gm_subzone",
                 )
                 subzone = st.multiselect(
@@ -80,7 +78,7 @@ def loadshedding_assignment() -> None:
             with state_input:
                 state_list = [
                     str(s)
-                    for s in subs_metadata["state"].dropna().unique()
+                    for s in profile_metadata["state"].dropna().unique()
                     if str(s).strip().lower() not in ["nan", ""]
                 ]
                 state = st.multiselect(
@@ -216,10 +214,10 @@ def loadshedding_assignment() -> None:
                 )
 
                 for z in zone_ls["zone"].unique():
-                    z_total = lprofile_obj.regional_loadprofile(z)
+                    zoneMW = ls_obj.zone_load_profile(z)
                     z_shed = zone_ls[zone_ls["zone"] == z]["Load (MW)"].sum()
                     st.caption(
-                        f"**{z}**: {z_shed:,.0f} MW ({(z_shed/z_total)*100:.1f}%)"
+                        f"**{z}**: {z_shed:,.0f} MW ({(z_shed/zoneMW)*100:.1f}%)"
                     )
 
             with col_pie2:

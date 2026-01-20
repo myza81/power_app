@@ -11,11 +11,11 @@ def loadprofile_main():
 
 
 def loadprofile_dashboard():
-    loadprofile = st.session_state["loadprofile"]
-    load_df = loadprofile.df
-    total_mw = loadprofile.totalMW()
-
+    ls_obj = st.session_state["loadshedding"]
     col_stateBar, col_pie1, col_metrics = st.columns([2, 2, 2])
+
+    load_df = ls_obj.loadprofile_df()
+    totalMW = load_df["Load (MW)"].sum()
 
     with col_pie1:
         zone_ls = load_df.groupby(["zone"], as_index=False)["Load (MW)"].sum()
@@ -25,7 +25,7 @@ def loadprofile_dashboard():
             names_col="zone",
             title="Regional Zone Load Demand",
             key=f"pie_zone_grid_load_profile",
-            annotations=f"{total_mw:,.0f} MW",
+            annotations=f"{totalMW:,.0f} MW",
             height=300,
             margin=dict(t=80, b=20, l=10, r=10),
         )
@@ -37,6 +37,7 @@ def loadprofile_dashboard():
             .agg({"Load (MW)": "sum"})
             .reset_index()
         )
+
         create_bar_chart(
             df=states,
             x_col="state",
@@ -52,12 +53,12 @@ def loadprofile_dashboard():
         st.markdown("")
         custom_metric(
             label="Maximum Demand (MD)",
-            value1=f"{total_mw:,.0f} MW",
+            value1=f"{totalMW:,.0f} MW",
         )
         st.markdown("")
         for z in load_df["zone"].unique():
-            z_total = loadprofile.regional_loadprofile(z)
+            zoneMW = ls_obj.zone_load_profile(z)
             st.markdown(
-                f'<span style="color: inherit; font-size: 14px; font-weight: 400">{z} Demand: </span><span style="color: inherit; font-size: 18px; font-weight: 600">{z_total:,.0f} MW</span>',
+                f'<span style="color: inherit; font-size: 14px; font-weight: 400">{z} Demand: </span><span style="color: inherit; font-size: 18px; font-weight: 600">{zoneMW:,.0f} MW</span>',
                 unsafe_allow_html=True,
             )

@@ -29,6 +29,7 @@ def simulator():
         return
 
     raw_master = ls_obj.ls_assignment_masterlist()
+
     scheme_cols = [
         c for c in raw_master.columns
         if any(k in c for k in ls_obj.LOADSHED_SCHEME)
@@ -180,7 +181,8 @@ def simulator():
             with save:
                 button_disabled = col_sim_validation(ls_colname)
                 df_sim = sim_df[["Assignment", SIM_STAGE]]
-                df_sim = df_sim.rename(columns={"Assignment": "assignment_id", SIM_STAGE: ls_colname})
+                df_sim = df_sim.rename(
+                    columns={"Assignment": "assignment_id", SIM_STAGE: ls_colname})
 
                 st.button(
                     label="💾 Save",
@@ -492,6 +494,7 @@ def render_conflict_details(row, assignment, ls_assign_mlist, ref_stage_col):
 
         st.write(f"**Substation:** {substation_name}")
         st.write(f"**Zone:** {row.get('Zone', 'N/A')}")
+        st.write(f"**State:** {row.get('state', 'N/A')}")
         st.write(f"**Assignment:** {assignment}")
         st.write(f"**{display_type}:** {row.get(ref_stage_col, 'N/A')}")
         st.write(f"**Load:** {row.get('Load (MW)', 'N/A')} MW")
