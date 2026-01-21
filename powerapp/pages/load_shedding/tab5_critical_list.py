@@ -1,6 +1,13 @@
 import streamlit as st
 from applications.load_shedding.load_profile import df_search_filter
 from applications.load_shedding.helper import column_data_list
+from pages.load_shedding.tab5a_critList_analytic import critical_list_analytic
+
+
+def critical_list_main():
+    critical_list()
+    st.divider()
+    critical_list_analytic()
 
 
 def critical_list():

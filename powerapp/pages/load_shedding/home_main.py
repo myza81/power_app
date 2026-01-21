@@ -6,7 +6,7 @@ from pages.load_shedding.tab1_loadprofile import loadprofile_main
 from pages.load_shedding.tab2_assignment import ls_assignment_main
 from pages.load_shedding.tab3_analytics import ls_analytics_main
 from pages.load_shedding.tab4_simulator import simulator
-from pages.load_shedding.tab5_critical_list import critical_list
+from pages.load_shedding.tab5_critical_list import critical_list_main
 
 
 st.set_page_config(layout="wide", page_title="UFLS")
@@ -56,7 +56,7 @@ if load_profile_uploader is not None:
         pass
 
     with tab5:
-        critical_list()
+        critical_list_main()
 
 else:
     st.info("Please upload or set a load profile first.")

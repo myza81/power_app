@@ -22,9 +22,8 @@ def simulator():
     dashboard_container = st.container()
 
     ls_obj = st.session_state.get("loadshedding")
-    lprofile_obj = st.session_state.get("loadprofile")
 
-    if not ls_obj or not lprofile_obj:
+    if not ls_obj:
         st.error("Load shedding data not found in session state.")
         return
 
@@ -215,7 +214,7 @@ def simulator():
 
         with metrics:
             display_simulation_metrics(
-                sim_df, raw_candidate, lprofile_obj, review_year)
+                sim_df, raw_candidate, ls_obj, review_year)
 
     with alarm_container:
         display_conflicts(view_df, ls_obj, ref_stage_col=SIM_STAGE)
@@ -238,7 +237,9 @@ def reset_to_base_reference(master_df, sim_key):
     st.session_state[sim_key]["sim_df"] = master_df.copy()
 
 
-def display_simulation_metrics(sim_df, raw_candidate, lprofile_obj, review_year):
+def display_simulation_metrics(sim_df, raw_candidate, ls_obj, review_year):
+
+    load_df = ls_obj.loadprofile_df()
 
     sim_ls = pd.merge(
         raw_candidate,
@@ -277,14 +278,14 @@ def display_simulation_metrics(sim_df, raw_candidate, lprofile_obj, review_year)
         quantum_val = quantum.values[0] if not quantum.empty else 0
 
         # Grid load percentage
-        grid_load = lprofile_obj.totalMW()
-        pct = (quantum_val / grid_load * 100) if grid_load > 0 else 0
+        totalMW = load_df["Load (MW)"].sum()
+        pct = (quantum_val / totalMW * 100) if totalMW > 0 else 0
 
         # Display metric
         custom_metric(
             label=f"{oper_stage.title()} Quantum:",
             value1=f"{quantum_val:,.0f}MW",
-            value2=f"<span style='font-size: 14px;'>({pct:,.1f}% of {grid_load:,.0f}MW)</span>",
+            value2=f"<span style='font-size: 14px;'>({pct:,.1f}% of {totalMW:,.0f}MW)</span>",
         )
 
         st.markdown("**Zone Breakdown:**")
@@ -294,7 +295,7 @@ def display_simulation_metrics(sim_df, raw_candidate, lprofile_obj, review_year)
                                         == oper_stage]
             mw_zone_stg = sim_zone_stg["Load (MW)"].values[0] if not sim_zone_stg.empty else 0
 
-            zone_load = lprofile_obj.regional_loadprofile(zone)
+            zone_load = ls_obj.zone_load_profile(zone)
             zone_load_pct = (mw_zone_stg / zone_load *
                              100) if zone_load > 0 else 0
 
@@ -330,6 +331,42 @@ def display_conflicts(view_df, ls_obj, ref_stage_col):
     if warning_rows.empty and alert_rows.empty:
         st.success("✅ **No conflicts detected!**")
         st.balloons()
+
+
+def potential_ls_candidate(ls_obj):
+    masterlist = ls_obj.ls_assignment_masterlist().copy()
+    incomer = ls_obj.incomer_relay()
+
+    auto_ls_cols = [
+        col for col in masterlist.columns
+        if str(col).lower().startswith(tuple(k.lower() for k in ls_obj.LOADSHED_SCHEME))
+        and not str(col).lower().startswith('emls')
+    ]
+
+    auto_ls_master = masterlist.dropna(subset=auto_ls_cols, how="all")
+
+    # st.write("auto_ls_master")
+    # st.write(auto_ls_master)
+    # st.write("incomer")
+    # st.write(incomer)
+
+    df_all = pd.merge(
+        auto_ls_master,
+        incomer,
+        on=["assignment_id", "local_trip_id", "state", "zone",
+            "gm_subzone", "mnemonic", "critical_list", "Load (MW)", "feeder_id"],
+        how="outer"
+    )
+
+    df_raw_cand = df_all.groupby(
+        ["assignment_id", "local_trip_id", "state", "zone",
+            "gm_subzone", "mnemonic", "critical_list"],
+        dropna=False,
+        as_index=False
+    ).agg({"Load (MW)": "sum", "feeder_id": lambda x: ", ".join(x.astype(str).unique())})
+ 
+
+    return df_raw_cand
 
 
 def build_master_df(ls_obj):
