@@ -2,12 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from pages.load_shedding.tab4_simulator import potential_ls_candidate
-from pages.load_shedding.helper import (
+from pages.load_shedding.helper import stage_sort
+from pages.load_shedding.helper_chart import (
     create_stackedBar_chart,
     create_groupBar_chart,
     get_dynamic_colors,
-    stage_sort,
 )
+
 
 
 def critical_list_analytic():
@@ -78,20 +79,26 @@ def critical_list_analytic():
                 ]
             )
             create_groupBar_chart(
-                zone_list_df,
+                df=zone_list_df,
                 x_col="zone",
                 y_col="MW",
                 color_col="load_type",
                 title="Automatic Load Shedding: Critical vs Non-Critical Load by Zone",
-                y_label="Demand (MW)",
-                color_discrete_map=dynamic_color_map,
+                title_fsize=18,
+                title_width=50,
+                title_x=0,
+                legend_x=0.1,
+                legend_y=-0.15,
+                lagend_xanchor="left",
+                legend_orient="h",
+                margin=dict(t=80, b=50, l=40, r=20),
+                color_discrete_map={},
                 category_order={},
                 height=450,
-                key="auto_ls_critical_load_zone",
+                key=None,
                 showlegend=True,
-                legend_x=0,
-                legend_y=-0.15,
-                legend_orient="h",
+                xaxis_label=None,
+                yaxis_label="Load (MW)",
             )
 
         with barchart2:
@@ -135,17 +142,23 @@ def critical_list_analytic():
             )
 
             create_groupBar_chart(
-                assign_list_df,
+                df=assign_list_df,
                 x_col="zone",
                 y_col="MW",
                 color_col="load_type",
                 title="Automatic Load Shedding: Critical vs Non-Critical by Assignment",
-                y_label="Number of Assignments",
-                category_order={},
-                height=450,
-                key="auto_ls_critical_load_assignment",
-                showlegend=True,
+                title_fsize=18,
+                title_width=50,
+                title_x=0,
                 legend_x=0,
                 legend_y=-0.15,
                 legend_orient="h",
+                margin=dict(t=80, b=40, l=40, r=20),
+                color_discrete_map={},
+                category_order={},
+                height=450,
+                key=None,
+                showlegend=True,
+                xaxis_label=None,
+                yaxis_label="Number of Assignment",
             )

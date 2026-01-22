@@ -10,7 +10,8 @@ from applications.load_shedding.helper import (
 from applications.data_processing.read_data import df_search_filter
 from applications.data_processing.save_to import export_to_excel
 from pages.load_shedding.tab2a_assign_compare import ls_assignment_comparison
-from pages.load_shedding.helper import show_temporary_message, create_donut_chart, process_display_data, find_latest_assignment
+from pages.load_shedding.helper import show_temporary_message, process_display_data, find_latest_assignment
+from pages.load_shedding.helper_chart import create_donut_chart
 from css.streamlit_css import custom_metric
 
 
@@ -201,7 +202,7 @@ def loadshedding_assignment() -> None:
                     df=zone_ls,
                     values_col="Load (MW)",
                     names_col="zone",
-                    title=f"{ls_sch} - by Regional Zone",
+                    title=f"{ls_sch} - by Regional Zone (over Grid Load)",
                     title_width=30,
                     key=f"pie_zone_{ls_sch}",
                     annotations=f"{total_ls_mw:,.0f} MW",
@@ -209,7 +210,7 @@ def loadshedding_assignment() -> None:
 
             with col_metrics:
                 custom_metric(
-                    "Total Load Shed",
+                    "Total Load Shed (over Regional Load)",
                     f"{total_ls_mw:,.0f} MW",
                     f"{(total_ls_mw/total_system_mw)*100:.1f}% of MD",
                 )
@@ -227,11 +228,10 @@ def loadshedding_assignment() -> None:
                 ].sum()
 
                 create_donut_chart(
-                    df=dp_ls,
+                    df=dp_ls ,
                     values_col="Load (MW)",
                     names_col="dp_type",
                     title=f"{ls_sch} - by Load Type",
-                    title_width=30,
                     key=f"pie_dp_{ls_sch}",
                     annotations=f"{total_ls_mw:,.0f} MW",
                 )

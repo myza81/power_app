@@ -1,7 +1,8 @@
 import pandas as pd
 import streamlit as st
 from applications.load_shedding.helper import scheme_col_sorted
-from pages.load_shedding.helper import create_stackedBar_chart, get_dynamic_colors, stage_sort
+from pages.load_shedding.helper_chart import create_stackedBar_chart, get_dynamic_colors
+from pages.load_shedding.helper import stage_sort
 
 
 def lshedding_barStacked(df, scheme):
@@ -50,18 +51,21 @@ def lshedding_barStacked(df, scheme):
             x_col="zone",
             y_col="mw",
             color_col="load_type",
-            color_discrete_map={
-                "Shedding": "#E74C3C",
-                "Un-shed": "#D5D8DC",
-            },
             title=f"{scheme} Quantum Vs Un-Shed Quantum - by Zone",
-            title_width=30,
-            category_order={"load_type": ["Un-shed", "Shedding"]},
             key=f"regional_load_shedding_stackedBar{scheme}",
+            title_width=30,
+            title_x=0,
+            title_fsize=18,
             showlegend=True,
             legend_x=0,
             legend_y=-0.15,
+            lagend_xanchor="left",
             legend_orient="h",
+            annotations="",
+            margin=dict(t=80, b=40, l=40, r=20),
+            color_discrete_map={},
+            category_order={},
+            height=400,
         )
 
     # Regional Operating Stage
@@ -86,7 +90,8 @@ def lshedding_barStacked(df, scheme):
             df=df_melted_staging,
             x_col="zone",
             y_col="mw",
-            y_label="Load Shedd Quantum (MW)",
+            xaxis_label=None,
+            yaxis_label="Load Shedd Quantum (MW)",
             color_col=scheme,
             color_discrete_map=dynamic_color_map,
             title=f"{scheme} Operational Staging - by Zone",
@@ -118,7 +123,8 @@ def lshedding_barStacked(df, scheme):
             color_col="zone",
             title=f"{scheme} Regional Zone Distributions",
             title_width=30,
-            y_label="Load Shedd Quantum (MW)",
+            xaxis_label=None,
+            yaxis_label="Load Shedd Quantum (MW)",
             color_discrete_map={},
             category_order={
                 "zone": ["KlangValley", "South", "North", "East"],

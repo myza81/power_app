@@ -1,5 +1,5 @@
 import streamlit as st
-from pages.load_shedding.helper import create_donut_chart, create_bar_chart
+from pages.load_shedding.helper_chart import create_donut_chart, create_bar_chart
 from pages.load_shedding.tab1a_loadprofile_data import loadprofile_data
 from css.streamlit_css import custom_metric
 
@@ -40,13 +40,24 @@ def loadprofile_dashboard():
 
         create_bar_chart(
             df=states,
-            x_col="state",
+            x_col="state" ,
             y_col="Load (MW)",
+            xaxis_label=None,
+            yaxis_label="Demand (MW)",
             title="State Load Demand",
-            y_label="Demand (MW)",
-            height=400,
-            color_discrete_sequence=["#26b41f"],
             key=f"state_load_demand",
+            title_width=30,
+            title_x=0,
+            title_font_size=18,
+            showlegend=False,
+            legend_x=0,
+            legend_y=-0.2,
+            legend_orient="h",
+            annotations="",
+            margin=dict(t=80, b=40, l=40, r=20),
+            color_discrete_map={},
+            color_discrete_sequence=["#26b41f"],
+            height=400,
         )
 
     with col_metrics:
