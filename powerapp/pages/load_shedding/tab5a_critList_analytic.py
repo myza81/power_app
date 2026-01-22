@@ -1,7 +1,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from pages.load_shedding.tab4_simulator import build_master_df, potential_ls_candidate
+from pages.load_shedding.tab4_simulator import potential_ls_candidate
+from pages.load_shedding.helper import (
+    create_stackedBar_chart,
+    create_groupBar_chart,
+    get_dynamic_colors,
+    stage_sort,
+)
 
 
 def critical_list_analytic():
@@ -17,76 +23,129 @@ def critical_list_analytic():
 
     raw_cand = potential_ls_candidate(ls_obj)
 
-    # st.write(raw_cand)
+    critical_list = raw_cand.loc[raw_cand["critical_list"].notna()]
+    critical_assign_ids = critical_list["assignment_id"].unique().tolist()
+
+    cand_with_crit = raw_cand.loc[raw_cand["assignment_id"].isin(critical_assign_ids)]
+    cand_with_crit_zone = cand_with_crit.groupby(
+        ["zone"], as_index=False, dropna=False
+    ).agg({"Load (MW)": "sum"})
+
+    cand_without_crit = raw_cand.loc[
+        ~raw_cand["assignment_id"].isin(critical_assign_ids)
+    ]
+    cand_without_crit_zone = cand_without_crit.groupby(
+        ["zone"], as_index=False, dropna=False
+    ).agg({"Load (MW)": "sum"})
 
     with barchart_container:
-        barchart1, barchart2, barchart3 = st.columns(3)
-
-        trip_duplicates = raw_cand[raw_cand.duplicated(subset=['local_trip_id'], keep=False)]
-        st.write("trip_duplicates")
-        st.write(trip_duplicates)
-        drop_duplicate = raw_cand.drop_duplicates(subset=["local_trip_id"])
-        st.write("drop_duplicate")
-        st.write(drop_duplicate)
+        barchart1, barchart2 = st.columns(2)
 
         with barchart1:
+            zone_list = pd.merge(
+                cand_with_crit_zone,
+                cand_without_crit_zone,
+                on="zone",
+                how="outer",
+                suffixes=("_critical", "_non_critical"),
+            ).dropna(subset=["zone"])
 
-          pass
+            zone_list["Total Potential (MW)"] = zone_list["Load (MW)_critical"].fillna(
+                0
+            ) + zone_list["Load (MW)_non_critical"].fillna(0)
 
-          
+            zone_list_df = zone_list.rename(
+                columns={
+                    "Load (MW)_critical": "Critical Load",
+                    "Load (MW)_non_critical": "Non_critical Load",
+                }
+            ).melt(
+                id_vars=["zone"],
+                value_vars=[
+                    "Critical Load",
+                    "Non_critical Load",
+                    "Total Potential (MW)",
+                ],
+                var_name="load_type",
+                value_name="MW",
+            )
 
-            # df_final = pd.concat([same_vals, different_vals_cleaned]).sort_index()
+            dynamic_color_map = get_dynamic_colors(
+                categories=[
+                    "Critical Load",
+                    "Non_critical Load",
+                    "Total Potential (MW)",
+                ]
+            )
+            create_groupBar_chart(
+                zone_list_df,
+                x_col="zone",
+                y_col="MW",
+                color_col="load_type",
+                title="Automatic Load Shedding: Critical vs Non-Critical Load by Zone",
+                y_label="Demand (MW)",
+                color_discrete_map=dynamic_color_map,
+                category_order={},
+                height=450,
+                key="auto_ls_critical_load_zone",
+            )
 
-            # zone_list = zone_list.drop_duplicates(subset=["local_trip_id"])
-            # st.write(different_vals)
+        with barchart2:
+            assign_non_list = (
+                cand_without_crit.groupby(["zone"], as_index=False, dropna=False)
+                .agg({"assignment_id": lambda x: x.nunique()})
+                .dropna(subset=["zone"])
+            )
+            assign_crit_list = (
+                cand_with_crit.groupby(["zone"], as_index=False, dropna=False)
+                .agg({"assignment_id": lambda x: x.nunique()})
+                .dropna(subset=["zone"])
+            )
 
-            # zone_list["load_type"] = np.where(
-            #     zone_list["critical_list"].notna(), "critical", "non_critical")
+            assign_list = pd.merge(
+                assign_non_list,
+                assign_crit_list,
+                on="zone",
+                how="outer",
+                suffixes=("_non_critical", "_critical"),
+            ).dropna(subset=["zone"])
 
-            # st.write((zone_list.loc[zone_list["zone"] == "South"]))
-            # st.write((zone_list.loc[zone_list["zone"] == "South"])["critical_load"].sum() )
+            assign_list["Total Assignment"] = assign_list[
+                "assignment_id_critical"
+            ].fillna(0) + assign_list["assignment_id_non_critical"].fillna(0)
 
-            # sum_cols = ["critical_load", "non_critical_load"]
+            assign_list_df = assign_list.rename(
+                columns={
+                    "assignment_id_critical": "Assignment With Critical Load",
+                    "assignment_id_non_critical": "Assignment With Non-Critical Load",
+                }
+            ).melt(
+                id_vars=["zone"],
+                value_vars=[
+                    "Assignment With Critical Load",
+                    "Assignment With Non-Critical Load",
+                    "Total Assignment",
+                ],
+                var_name="load_type",
+                value_name="MW",
+            )
 
-            # agg_dict = ({col: "sum" for col in sum_cols}
-            # )
-
-            # zone_list_grp = (
-            #     zone_list
-            #     .groupby(
-            #         ["zone"],
-            #         dropna=False,
-            #         as_index=False
-            #     )
-            #     .agg(agg_dict)
-            #     # .reset_index()
-            # )
-            # st.write(zone_list_grp)
-
-        #     df_melted_staging = staging_ls.melt(
-        #         id_vars=['zone', scheme],
-        #         value_vars=['Shedding'],
-        #         var_name='load_type',
-        #         value_name='mw'
-        #     )
-
-        # scheme_list = staging_ls[scheme].unique().tolist()
-
-        # if not scheme_list:
-        #     sorted_stages = []
-        # else:
-        #     sorted_stages = sorted(scheme_list, key=stage_sort)
-
-        # dynamic_color_map = get_dynamic_colors(categories=sorted_stages)
-
-        # create_stackedBar_chart(
-        #     df=df_melted_staging,
-        #     x_col="zone",
-        #     y_col="mw",
-        #     y_label="Load Shedd Quantum (MW)",
-        #     color_col=scheme,
-        #     color_discrete_map=dynamic_color_map,
-        #     title=f"{scheme} Operational Staging - by Regional Zone",
-        #     category_order={scheme: sorted_stages},
-        #     key=f"regional_load_shedding_staging_stackedBar{scheme}"
-        # )
+            dynamic_color_map = get_dynamic_colors(
+                categories=[
+                    "Assignment With Critical Load",
+                    "Assignment With Non-Critical Load",
+                    "Total Assignment",
+                ]
+            )
+            create_groupBar_chart(
+                assign_list_df,
+                x_col="zone",
+                y_col="MW",
+                color_col="load_type",
+                title="Automatic Load Shedding: Critical vs Non-Critical Assignment by Zone",
+                y_label="Number of Assignments",
+                color_discrete_map=dynamic_color_map,
+                category_order={},
+                height=450,
+                key="auto_ls_critical_load_assignment",
+            )

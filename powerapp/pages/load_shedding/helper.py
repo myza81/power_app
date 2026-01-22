@@ -244,6 +244,54 @@ def create_stackedBar_chart(
     st.plotly_chart(fig, width="content", key=key)
 
 
+def create_groupBar_chart(
+    df,
+    x_col="zone",
+    y_col="mw",
+    color_col="load_type",
+    title="Regional Load Breakdown",
+    y_label="Demand (MW)",
+    color_discrete_map={},
+    category_order={},
+    height=450,
+    key=None,
+):
+    fig = px.bar(
+        df,
+        x=x_col,
+        y=y_col,
+        color=color_col,
+        barmode="group",
+        color_discrete_map=color_discrete_map,
+        category_orders=category_order,
+    )
+
+    display_title = "<br>".join(textwrap.wrap(title, width=40))
+
+    fig.update_layout(
+        title={
+            "text": display_title,
+            "x": 0.5,
+            "font": {"size": 18},
+            "xanchor": "center",
+        },
+        xaxis_title=None,
+        yaxis_title=y_label,
+        height=height,
+        legend=dict(
+            title=None,
+            orientation="v",  # v=vertical. h=horizontal
+            yanchor="middle",  # Center it vertically relative to the chart
+            y=0.5,  # 0.5 is the middle of the Y-axis
+            x=1.02,
+        ),
+        margin=dict(t=80, b=40, l=40, r=20),  # Standardize margins
+        legend_title_text="",
+    )
+    fig.update_xaxes(showgrid=False)
+    st.plotly_chart(fig, width="content", key=key)
+
+
 def get_dynamic_colors(categories, fix_color={}):
 
     standard_colors = px.colors.qualitative.Safe
