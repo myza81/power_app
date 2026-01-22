@@ -77,10 +77,10 @@ def ls_assignment_comparison():
             )
     
     with export_btn_container:
-        btn, _, _ = st.columns([3, 1, 2])
+        btn, _ = st.columns([3, 1])
 
         with btn:
-            filename_input, export_btn = st.columns([6, 3])
+            filename_input, export_btn = st.columns([2, 1])
 
             with filename_input:
                 filename = st.text_input(

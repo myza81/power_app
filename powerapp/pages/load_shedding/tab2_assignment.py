@@ -160,10 +160,10 @@ def loadshedding_assignment() -> None:
         # Export Section
         with export_btn_container:
             if not searched_df.empty:
-                c10, _, _ = st.columns([3, 1, 2])
+                c10, _ = st.columns([3, 1])
 
                 with c10:
-                    filename_input, export_btn = st.columns([6, 3])
+                    filename_input, export_btn = st.columns([2, 1])
 
                     with filename_input:
                         filename = st.text_input(
@@ -201,7 +201,8 @@ def loadshedding_assignment() -> None:
                     df=zone_ls,
                     values_col="Load (MW)",
                     names_col="zone",
-                    title=f"{ls_sch} Assignment - by Regional Zone",
+                    title=f"{ls_sch} - by Regional Zone",
+                    title_width=30,
                     key=f"pie_zone_{ls_sch}",
                     annotations=f"{total_ls_mw:,.0f} MW",
                 )
@@ -229,11 +230,9 @@ def loadshedding_assignment() -> None:
                     df=dp_ls,
                     values_col="Load (MW)",
                     names_col="dp_type",
-                    title=f"{ls_sch} Assignment - by Load Type",
+                    title=f"{ls_sch} - by Load Type",
+                    title_width=30,
                     key=f"pie_dp_{ls_sch}",
                     annotations=f"{total_ls_mw:,.0f} MW",
                 )
 
-    # Assignment Comparison
-    # with assignment_comparison_container:
-    #     ls_assignment_comparison()

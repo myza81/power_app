@@ -33,9 +33,9 @@ def lshedding_barStacked(df, scheme):
         {"Shedding": "sum"}).reset_index()
 
     # 3. Layout: Visualization
-    c1, _, c2, _, c3 = st.columns([1.8, 0.1, 1.5, 0.1, 2])
-    
-    
+    c1, _, c2 = st.columns([1, 0.1, 1])
+    c3, _ = st.columns([1, 0.1])
+
     # Regional Zone Shedding Quantum Vs Un-Shed Quantum
     with c1:
         df_melted_regional = zone_df.melt(
@@ -51,13 +51,17 @@ def lshedding_barStacked(df, scheme):
             y_col="mw",
             color_col="load_type",
             color_discrete_map={
-                'Shedding': '#E74C3C',
-                'Un-shed': '#D5D8DC',
+                "Shedding": "#E74C3C",
+                "Un-shed": "#D5D8DC",
             },
-            title=f"{scheme} Shedding Quantum Vs Un-Shed Quantum - by Regional Zone",
-            category_order={"load_type": [
-                "Un-shed", "Shedding"]},
-            key=f"regional_load_shedding_stackedBar{scheme}"
+            title=f"{scheme} Quantum Vs Un-Shed Quantum - by Zone",
+            title_width=30,
+            category_order={"load_type": ["Un-shed", "Shedding"]},
+            key=f"regional_load_shedding_stackedBar{scheme}",
+            showlegend=True,
+            legend_x=0,
+            legend_y=-0.15,
+            legend_orient="h",
         )
 
     # Regional Operating Stage
@@ -85,9 +89,14 @@ def lshedding_barStacked(df, scheme):
             y_label="Load Shedd Quantum (MW)",
             color_col=scheme,
             color_discrete_map=dynamic_color_map,
-            title=f"{scheme} Operational Staging - by Regional Zone",
+            title=f"{scheme} Operational Staging - by Zone",
+            title_width=30,
             category_order={scheme: sorted_stages},
-            key=f"regional_load_shedding_staging_stackedBar{scheme}"
+            key=f"regional_load_shedding_staging_stackedBar{scheme}",
+            showlegend=True,
+            legend_x=0,
+            legend_y=-0.15,
+            legend_orient="h",
         )
 
     # Regional Distribution
@@ -108,13 +117,17 @@ def lshedding_barStacked(df, scheme):
             y_col="Load (MW)",
             color_col="zone",
             title=f"{scheme} Regional Zone Distributions",
+            title_width=30,
             y_label="Load Shedd Quantum (MW)",
             color_discrete_map={},
             category_order={
                 "zone": ["KlangValley", "South", "North", "East"],
-                scheme: sorted_stages
+                scheme: sorted_stages,
             },
             height=450,
-            key=f"{scheme}_regional_zone_distribution"
+            key=f"{scheme}_regional_zone_distribution",
+            showlegend=True,
+            legend_x=0,
+            legend_y=-0.15,
+            legend_orient="h",
         )
-

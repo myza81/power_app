@@ -18,8 +18,7 @@ def display_ls_metrics(scheme, df, load_profile):
     col1, col2, col3 = st.columns([2.0, 3.5, 2.5])
 
     total_MD = load_profile["Pload (MW)"].sum()
-    is_scheme_valid = df[scheme].notna() & (
-        df[scheme] != "nan") & (df[scheme] != "#na")
+    is_scheme_valid = df[scheme].notna() & (df[scheme] != "nan") & (df[scheme] != "#na")
 
     total_scheme_ls = df.loc[is_scheme_valid, "Pload (MW)"].sum()
 
@@ -30,13 +29,9 @@ def display_ls_metrics(scheme, df, load_profile):
 
     zones = ["North", "KlangValley", "South", "East"]
     zone_data = {
-        zone: load_profile_metric(df=df, zone=zone, scheme=scheme)
-        for zone in zones
+        zone: load_profile_metric(df=df, zone=zone, scheme=scheme) for zone in zones
     }
-    zone_MD = {
-        zone: load_profile_metric(df=load_profile, zone=zone)
-        for zone in zones
-    }
+    zone_MD = {zone: load_profile_metric(df=load_profile, zone=zone) for zone in zones}
 
     with col1:
         st.metric(
@@ -82,11 +77,11 @@ def zone_metric(col, zone_name, zone_data, zone_MD):
 def show_temporary_message(message_type, message, duration=3):
     placeholder = st.empty()
 
-    if message_type == 'info':
+    if message_type == "info":
         placeholder.info(message)
-    elif message_type == 'success':
+    elif message_type == "success":
         placeholder.success(message)
-    elif message_type == 'warning':
+    elif message_type == "warning":
         placeholder.warning(message)
 
     time.sleep(duration)
@@ -96,7 +91,7 @@ def show_temporary_message(message_type, message, duration=3):
 
 def find_latest_assignment(ls_scheme_list):
     # Filter: remove items with extra characters after numbers
-    pattern = r'^(\w+)_(\d+)$'  # word_numbers (nothing after numbers)
+    pattern = r"^(\w+)_(\d+)$"  # word_numbers (nothing after numbers)
     filtered = []
 
     for item in ls_scheme_list:
@@ -128,14 +123,19 @@ def create_donut_chart(
     values_col=None,
     names_col="",
     title="",
+    title_width=30,
+    title_x=0,
+    title_font_size=18,
     key=None,
     annotations="",
     height=250,
     margin=dict(t=30, b=20, l=10, r=10),
+    showlegend=False,
+    legend_x=0,
+    legend_y=-0.2,
+    legend_orient="h",
 ):
     fig = px.pie(df, values=values_col, names=names_col, hole=0.5)
-
-    display_title = "<br>".join(textwrap.wrap(title, width=40))
 
     fig.update_traces(
         hoverinfo="label+percent+value",
@@ -145,16 +145,14 @@ def create_donut_chart(
     )
 
     fig.update_layout(
-        title={"text": display_title, "x": 0.5,
-               "font": {"size": 18}, 'xanchor': 'center'},
-        showlegend=False,
+        title=chart_title(title, title_width, title_x, title_font_size),
+        showlegend=showlegend,
         height=height,
         margin=margin,
         annotations=[
-            dict(
-                text=annotations, x=0.5, y=0.5, font_size=18, showarrow=False
-            )
+            dict(text=annotations, x=0.5, y=0.5, font_size=18, showarrow=False)
         ],
+        legend=chart_legend(orientation=legend_orient, loc_x=legend_x, loc_y=legend_y),
     )
     st.plotly_chart(fig, width="content", key=key)
 
@@ -164,11 +162,14 @@ def create_bar_chart(
     x_col="zone",
     y_col="mw",
     title="Regional Load Breakdown",
+    title_width=30,
+    title_x=0,
+    title_font_size=18,
     color_discrete_map={},
     color_discrete_sequence=["#1f77b4"],
     y_label="Demand (MW)",
     height=400,
-    key=None
+    key=None,
 ):
     fig = px.bar(
         df,
@@ -178,103 +179,8 @@ def create_bar_chart(
         color_discrete_sequence=color_discrete_sequence,
     )
 
-    display_title = "<br>".join(textwrap.wrap(title, width=40))
-
     fig.update_layout(
-        title={"text": display_title, "x": 0.5,
-               "font": {"size": 18}, 'xanchor': 'center'},
-        xaxis_title=None,
-        yaxis_title=y_label,
-        height=height,
-        legend=dict(
-            title=None,
-            orientation="v",  # v=vertical. h=horizontal
-            yanchor="middle",  # Center it vertically relative to the chart
-            y=0.5,  # 0.5 is the middle of the Y-axis
-            x=1.02
-        ),
-        margin=dict(t=80, b=40, l=40, r=20),  # Standardize margins
-        legend_title_text=''
-    )
-
-    st.plotly_chart(fig, width="content", key=key)
-
-
-def create_stackedBar_chart(
-    df,
-    x_col="zone",
-    y_col="mw",
-    color_col="load_type",
-    title="Regional Load Breakdown",
-    y_label="Demand (MW)",
-    color_discrete_map={},
-    category_order={},
-    height=450,
-    key=None
-):
-    fig = px.bar(
-        df,
-        x=x_col,
-        y=y_col,
-        color=color_col,
-        barmode="stack",
-        color_discrete_map=color_discrete_map,
-        category_orders=category_order
-    )
-
-    display_title = "<br>".join(textwrap.wrap(title, width=40))
-
-    fig.update_layout(
-        title={"text": display_title, "x": 0.5,
-               "font": {"size": 18}, 'xanchor': 'center'},
-        xaxis_title=None,
-        yaxis_title=y_label,
-        height=height,
-        legend=dict(
-            title=None,
-            orientation="v",  # v=vertical. h=horizontal
-            yanchor="middle",  # Center it vertically relative to the chart
-            y=0.5,  # 0.5 is the middle of the Y-axis
-            x=1.02
-        ),
-        margin=dict(t=80, b=40, l=40, r=20),  # Standardize margins
-        legend_title_text=''
-    )
-
-    st.plotly_chart(fig, width="content", key=key)
-
-
-def create_groupBar_chart(
-    df,
-    x_col="zone",
-    y_col="mw",
-    color_col="load_type",
-    title="Regional Load Breakdown",
-    y_label="Demand (MW)",
-    color_discrete_map={},
-    category_order={},
-    height=450,
-    key=None,
-):
-    fig = px.bar(
-        df,
-        x=x_col,
-        y=y_col,
-        color=color_col,
-        barmode="group",
-        color_discrete_map=color_discrete_map,
-        category_orders=category_order,
-    )
-
-    display_title = "<br>".join(textwrap.wrap(title, width=40))
-
-    fig.update_layout(
-        title={
-            "text": display_title,
-            "x": 0.5,
-            "font": {"size": 18},
-            "xanchor": "center",
-        },
+        title=chart_title(title, title_width, title_x, title_font_size),
         xaxis_title=None,
         yaxis_title=y_label,
         height=height,
@@ -288,8 +194,109 @@ def create_groupBar_chart(
         margin=dict(t=80, b=40, l=40, r=20),  # Standardize margins
         legend_title_text="",
     )
+
+    st.plotly_chart(fig, width="content", key=key)
+
+
+def create_stackedBar_chart(
+    df,
+    x_col="zone",
+    y_col="mw",
+    color_col="load_type",
+    title="Regional Load Breakdown",
+    title_width=30,
+    title_x=0,
+    title_font_size=18,
+    y_label="Demand (MW)",
+    color_discrete_map={},
+    category_order={},
+    height=450,
+    key=None,
+    showlegend=False,
+    legend_x=0,
+    legend_y=-0.2,
+    legend_orient="h",
+):
+    fig = px.bar(
+        df,
+        x=x_col,
+        y=y_col,
+        color=color_col,
+        barmode="stack",
+        color_discrete_map=color_discrete_map,
+        category_orders=category_order,
+    )
+
+    fig.update_layout(
+        title=chart_title(title, title_width, title_x, title_font_size),
+        xaxis_title=None,
+        yaxis_title=y_label,
+        height=height,
+        showlegend=showlegend,
+        legend=chart_legend(orientation=legend_orient, loc_x=legend_x, loc_y=legend_y),
+    )
+
+    st.plotly_chart(fig, width="content", key=key)
+
+
+def create_groupBar_chart(
+    df,
+    x_col="zone",
+    y_col="mw",
+    color_col="load_type",
+    title="Regional Load Breakdown",
+    title_width=30,
+    title_x=0,
+    title_font_size=18,
+    y_label="Demand (MW)",
+    color_discrete_map={},
+    category_order={},
+    height=450,
+    key=None,
+    showlegend=False,
+    legend_x=0,
+    legend_y=-0.2,
+    legend_orient="h",
+):
+    fig = px.bar(
+        df,
+        x=x_col,
+        y=y_col,
+        color=color_col,
+        barmode="group",
+        color_discrete_map=color_discrete_map,
+        category_orders=category_order,
+    )
+
+    fig.update_layout(
+        title=chart_title(title, title_width, title_x, title_font_size),
+        xaxis_title=None,
+        yaxis_title=y_label,
+        height=height,
+        showlegend=showlegend,
+        legend=chart_legend(orientation=legend_orient, loc_x=legend_x, loc_y=legend_y),
+    )
     fig.update_xaxes(showgrid=False)
     st.plotly_chart(fig, width="content", key=key)
+
+
+def chart_title(title, title_width, title_x, title_font_size):
+    display_title = "<br>".join(textwrap.wrap(title, width=title_width))
+    return dict(
+        text=display_title,
+        x=title_x,
+        font={"size": title_font_size},
+        xanchor="center",
+    )
+
+
+def chart_legend(orientation, loc_x, loc_y):
+    return dict(
+        y=loc_y,
+        x=loc_x,
+        title=None,
+        orientation=orientation,
+    )
 
 
 def get_dynamic_colors(categories, fix_color={}):
@@ -306,7 +313,7 @@ def get_dynamic_colors(categories, fix_color={}):
 
 def stage_sort(stage_str):
     try:
-        parts = stage_str.split('_')
+        parts = stage_str.split("_")
         if len(parts) > 1 and parts[1].isdigit():
             return int(parts[1])
     except (ValueError, IndexError):
@@ -315,8 +322,7 @@ def stage_sort(stage_str):
 
 
 def join_unique_non_empty(series):
-    unique_vals = [str(v) for v in series.dropna().unique()
-                   if str(v).strip() != ""]
+    unique_vals = [str(v) for v in series.dropna().unique() if str(v).strip() != ""]
     return ", ".join(unique_vals) if unique_vals else None
 
 
@@ -346,7 +352,7 @@ def custom_table(table_title, table_content):
         .table-title {{margin-top: 30px;font-size: 16px;font-weight: 600;}}
         </style><div class='table-title'>{display_title}</div><div class='table-container'>{table_content}</div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
 
@@ -355,8 +361,7 @@ def process_display_data(
 ) -> pd.DataFrame:
     """Handles the merging and grouping logic for the main table."""
 
-    df_merged = pd.merge(searched_df, pocket_relay,
-                         on="assignment_id", how="left")
+    df_merged = pd.merge(searched_df, pocket_relay, on="assignment_id", how="left")
 
     mappings = {
         "Zone": "zone",
@@ -371,8 +376,7 @@ def process_display_data(
 
     for display_col, raw_col in mappings.items():
         if display_col in df_merged.columns:
-            df_merged[display_col] = df_merged[display_col].fillna(
-                df_merged[raw_col])
+            df_merged[display_col] = df_merged[display_col].fillna(df_merged[raw_col])
         else:
             df_merged[display_col] = df_merged[raw_col]
 

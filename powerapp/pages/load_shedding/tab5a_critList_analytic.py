@@ -11,7 +11,7 @@ from pages.load_shedding.helper import (
 
 
 def critical_list_analytic():
-    st.subheader("Critical List Analytic")
+    st.subheader("Critical List Distribution Analysis")
 
     barchart_container = st.container()
 
@@ -88,6 +88,10 @@ def critical_list_analytic():
                 category_order={},
                 height=450,
                 key="auto_ls_critical_load_zone",
+                showlegend=True,
+                legend_x=0,
+                legend_y=-0.15,
+                legend_orient="h",
             )
 
         with barchart2:
@@ -116,36 +120,32 @@ def critical_list_analytic():
 
             assign_list_df = assign_list.rename(
                 columns={
-                    "assignment_id_critical": "Assignment With Critical Load",
-                    "assignment_id_non_critical": "Assignment With Non-Critical Load",
+                    "assignment_id_critical": "Critical Load",
+                    "assignment_id_non_critical": "Non-Critical Load",
                 }
             ).melt(
                 id_vars=["zone"],
                 value_vars=[
-                    "Assignment With Critical Load",
-                    "Assignment With Non-Critical Load",
+                    "Critical Load",
+                    "Non-Critical Load",
                     "Total Assignment",
                 ],
                 var_name="load_type",
                 value_name="MW",
             )
 
-            dynamic_color_map = get_dynamic_colors(
-                categories=[
-                    "Assignment With Critical Load",
-                    "Assignment With Non-Critical Load",
-                    "Total Assignment",
-                ]
-            )
             create_groupBar_chart(
                 assign_list_df,
                 x_col="zone",
                 y_col="MW",
                 color_col="load_type",
-                title="Automatic Load Shedding: Critical vs Non-Critical Assignment by Zone",
+                title="Automatic Load Shedding: Critical vs Non-Critical by Assignment",
                 y_label="Number of Assignments",
-                color_discrete_map=dynamic_color_map,
                 category_order={},
                 height=450,
                 key="auto_ls_critical_load_assignment",
+                showlegend=True,
+                legend_x=0,
+                legend_y=-0.15,
+                legend_orient="h",
             )
