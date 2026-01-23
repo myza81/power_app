@@ -102,6 +102,8 @@ class LoadShedding:
         }
         df = self.substations.copy()
         df["zone"] = df["gm_subzone"].map(self.zone_mapping)
+        # st.write("submeta")
+        # st.write(df)
 
         return df
 
@@ -124,7 +126,7 @@ class LoadShedding:
 
         df["state_meta"] = df["state_meta"].replace('nan', np.nan)
         df["state"] = df["state_meta"].combine_first(df["state_profile"])
-        df["zone"] = df["zone_profile"].combine_first(df["zone_meta"])
+        df["zone"] = df["zone_meta"].combine_first(df["zone_profile"])
         df = df.drop(
             columns=["state_meta", "state_profile", "zone_meta", "zone_profile"])
 
@@ -133,6 +135,9 @@ class LoadShedding:
             ~mask,
             df["mnemonic"] + " (" + df["substation_name"].fillna("") + ")"
         )
+
+        # st.write("submeta profile")
+        # st.write(df)
 
         return df
 
@@ -151,6 +156,9 @@ class LoadShedding:
             keep='first'
         ).reset_index(drop=True)
 
+
+        # st.write("submeta profile")
+        # st.write(df_unique)
         return df_unique
 
     def zone_load_profile(self, zone):
@@ -179,12 +187,17 @@ class LoadShedding:
             how="left",
         )
 
+        # st.write("profile_metadata")
+        # st.write(profile_metadata)
+
         df_meta = pd.merge(
             df,
             profile_metadata,
             on="mnemonic",
             how="left",
         )
+        # st.write("df_meta")
+        # st.write(df)
 
         df_flaglist = pd.merge(
             df_meta,

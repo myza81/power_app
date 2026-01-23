@@ -206,3 +206,19 @@ def process_display_data(
     }
 
     return df_merged.groupby(group_cols, as_index=False, dropna=False).agg(agg_map)
+
+def remove_duplicates_keep_nan(df, col_name):
+    """
+    Remove duplicates but keep all NaN values.
+    """
+    # Create a mask to identify duplicates
+    is_duplicate = df[col_name].duplicated()
+    
+    # Create a mask for NaN values
+    is_nan = df[col_name].isna()
+    
+    # Keep if: not a duplicate OR is NaN
+    keep_mask = (~is_duplicate) | is_nan
+    
+    return df[keep_mask].reset_index(drop=True)
+

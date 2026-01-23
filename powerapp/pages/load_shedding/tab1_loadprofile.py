@@ -1,7 +1,7 @@
 import streamlit as st
 from pages.load_shedding.helper_chart import create_donut_chart, create_bar_chart
 from pages.load_shedding.tab1a_loadprofile_data import loadprofile_data
-from css.streamlit_css import custom_metric
+from css.streamlit_css import custom_metric, custom_metric_one_line
 
 
 def loadprofile_main():
@@ -40,7 +40,7 @@ def loadprofile_dashboard():
 
         create_bar_chart(
             df=states,
-            x_col="state" ,
+            x_col="state",
             y_col="Load (MW)",
             xaxis_label=None,
             yaxis_label="Demand (MW)",
@@ -69,7 +69,17 @@ def loadprofile_dashboard():
         st.markdown("")
         for z in load_df["zone"].unique():
             zoneMW = ls_obj.zone_load_profile(z)
-            st.markdown(
-                f'<span style="color: inherit; font-size: 14px; font-weight: 400">{z} Demand: </span><span style="color: inherit; font-size: 18px; font-weight: 600">{zoneMW:,.0f} MW</span>',
-                unsafe_allow_html=True,
+
+            custom_metric_one_line(
+                title=f"",
+                values_obj={
+                    f"{z}": f"{zoneMW:,.0f} MW ({zoneMW/totalMW*100:,.0f}%)",
+                },
+                title_size="18px",
+                item_color="#6b7280",
+                item_size="14px",
+                item_weight=700,
+                value_size="16px",
+                value_weight=700,
+                value_color="#2E86C1",
             )

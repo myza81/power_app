@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-from pages.load_shedding.tab4_simulator import potential_ls_candidate
-from pages.load_shedding.helper import stage_sort
-from pages.load_shedding.helper_chart import (
-    create_stackedBar_chart,
-    create_groupBar_chart,
-    get_dynamic_colors,
-)
 
+from pages.load_shedding.tab4_simulator import potential_ls_candidate
+from pages.load_shedding.tab5b_critList_dashboard import critical_list_metric
+from pages.load_shedding.helper_chart import create_groupBar_chart
+
+
+def critical_list_analytic_main():
+    critical_list_analytic()
+    critical_list_metric()
 
 
 def critical_list_analytic():
@@ -22,19 +22,13 @@ def critical_list_analytic():
         st.error("Load shedding data not found in session state.")
         return
 
-    raw_cand = potential_ls_candidate(ls_obj)
+    df_raw_cand, cand_with_crit, cand_without_crit = potential_ls_candidate(
+        ls_obj)
 
-    critical_list = raw_cand.loc[raw_cand["critical_list"].notna()]
-    critical_assign_ids = critical_list["assignment_id"].unique().tolist()
-
-    cand_with_crit = raw_cand.loc[raw_cand["assignment_id"].isin(critical_assign_ids)]
     cand_with_crit_zone = cand_with_crit.groupby(
         ["zone"], as_index=False, dropna=False
     ).agg({"Load (MW)": "sum"})
 
-    cand_without_crit = raw_cand.loc[
-        ~raw_cand["assignment_id"].isin(critical_assign_ids)
-    ]
     cand_without_crit_zone = cand_without_crit.groupby(
         ["zone"], as_index=False, dropna=False
     ).agg({"Load (MW)": "sum"})
@@ -55,35 +49,35 @@ def critical_list_analytic():
                 0
             ) + zone_list["Load (MW)_non_critical"].fillna(0)
 
+            category = ["Total Potential (MW)",
+                        "Non-Critical Load", "Critical Load"]
+
             zone_list_df = zone_list.rename(
                 columns={
                     "Load (MW)_critical": "Critical Load",
-                    "Load (MW)_non_critical": "Non_critical Load",
+                    "Load (MW)_non_critical": "Non-Critical Load",
                 }
             ).melt(
                 id_vars=["zone"],
-                value_vars=[
-                    "Critical Load",
-                    "Non_critical Load",
-                    "Total Potential (MW)",
-                ],
+                value_vars=category,
                 var_name="load_type",
                 value_name="MW",
             )
 
-            dynamic_color_map = get_dynamic_colors(
-                categories=[
-                    "Critical Load",
-                    "Non_critical Load",
-                    "Total Potential (MW)",
-                ]
-            )
+            color_map = {
+                "Critical Load": "#F54927",
+                "Non-Critical Load": "#27C8F5",
+                "Total Potential (MW)": "#2749F5"
+            }
+
+            category_order = {"load_type": category}
+
             create_groupBar_chart(
                 df=zone_list_df,
                 x_col="zone",
                 y_col="MW",
                 color_col="load_type",
-                title="Automatic Load Shedding: Critical vs Non-Critical Load by Zone",
+                title="Automatic Load Shedding: Critical vs Non-Critical by Load Zone",
                 title_fsize=18,
                 title_width=50,
                 title_x=0,
@@ -92,8 +86,8 @@ def critical_list_analytic():
                 lagend_xanchor="left",
                 legend_orient="h",
                 margin=dict(t=80, b=50, l=40, r=20),
-                color_discrete_map={},
-                category_order={},
+                color_discrete_map=color_map,
+                category_order=category_order,
                 height=450,
                 key=None,
                 showlegend=True,
@@ -103,7 +97,8 @@ def critical_list_analytic():
 
         with barchart2:
             assign_non_list = (
-                cand_without_crit.groupby(["zone"], as_index=False, dropna=False)
+                cand_without_crit.groupby(
+                    ["zone"], as_index=False, dropna=False)
                 .agg({"assignment_id": lambda x: x.nunique()})
                 .dropna(subset=["zone"])
             )
@@ -125,6 +120,9 @@ def critical_list_analytic():
                 "assignment_id_critical"
             ].fillna(0) + assign_list["assignment_id_non_critical"].fillna(0)
 
+            category = ["Total Assignment",
+                        "Non-Critical Load", "Critical Load"]
+
             assign_list_df = assign_list.rename(
                 columns={
                     "assignment_id_critical": "Critical Load",
@@ -132,14 +130,17 @@ def critical_list_analytic():
                 }
             ).melt(
                 id_vars=["zone"],
-                value_vars=[
-                    "Critical Load",
-                    "Non-Critical Load",
-                    "Total Assignment",
-                ],
+                value_vars=category,
                 var_name="load_type",
                 value_name="MW",
             )
+
+            color_map = {
+                "Critical Load": "#F54927",
+                "Non-Critical Load": "#27C8F5",
+                "Total Assignment": "#2749F5"
+            }
+            category_order = {"load_type": category}
 
             create_groupBar_chart(
                 df=assign_list_df,
@@ -154,8 +155,8 @@ def critical_list_analytic():
                 legend_y=-0.15,
                 legend_orient="h",
                 margin=dict(t=80, b=40, l=40, r=20),
-                color_discrete_map={},
-                category_order={},
+                color_discrete_map=color_map,
+                category_order=category_order,
                 height=450,
                 key=None,
                 showlegend=True,

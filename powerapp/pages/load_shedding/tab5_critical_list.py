@@ -1,13 +1,13 @@
 import streamlit as st
 from applications.load_shedding.load_profile import df_search_filter
 from applications.load_shedding.helper import column_data_list
-from pages.load_shedding.tab5a_critList_analytic import critical_list_analytic
+from pages.load_shedding.tab5a_critList_analytic import critical_list_analytic_main
 
 
 def critical_list_main():
     critical_list()
     st.divider()
-    critical_list_analytic()
+    critical_list_analytic_main()
 
 
 def critical_list():
@@ -18,7 +18,7 @@ def critical_list():
     flaglist_subs = ls_obj.flaglist_subs()
 
     col1, col2, col3 = st.columns(3)
-    col4, col5, col6 = st.columns(3)
+    col4, col5, _ = st.columns(3)
 
     with col1:
         zones = st.multiselect(

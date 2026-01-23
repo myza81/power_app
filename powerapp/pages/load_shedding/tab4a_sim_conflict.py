@@ -102,36 +102,37 @@ def raise_flags(df, ls_latest_cols, ref_scheme, ref_stage_col):
 
 
 def conflict_assignment(
-    master_sim_df, valid_candidate, ls_obj, review_year, ref_stage_col
+    sim_df, ls_obj, base_scheme, sim_scheme
 ):
-    """Main function to detect and flag conflicts"""
 
-    df = master_sim_df.copy()
+    if base_scheme[:4] not in ls_obj.LOADSHED_SCHEME:
+        return sim_df
+
+    ref_scheme = base_scheme[:4]
+
+    all_ls_columns = [
+        col for col in sim_df.columns
+        if any(col.startswith(scheme) for scheme in ls_obj.LOADSHED_SCHEME)
+    ]
 
     lshedding_columns = [
         col
-        for col in valid_candidate.columns
-        if any(k in col for k in ls_obj.LOADSHED_SCHEME)
-        and not col.startswith(review_year[:4])
+        for col in all_ls_columns
+        if not col.startswith(ref_scheme)
     ]
+
+    columns_to_keep = set([base_scheme]) | set(lshedding_columns)
+    columns_to_drop = set(all_ls_columns) - columns_to_keep
+
+    sim_dataframe = sim_df.copy()
+    if columns_to_drop:
+        sim_dataframe = sim_dataframe.drop(columns=list(columns_to_drop))
 
     ls_latest_cols = find_latest_assignment(lshedding_columns)
 
-    df_merge = pd.merge(
-        df,
-        valid_candidate[["assignment_id"] + ls_latest_cols],
-        left_on="Assignment",
-        right_on="assignment_id",
-        how="left",
-    )
+    df_merge = raise_flags(sim_dataframe, ls_latest_cols,
+                           ref_scheme, sim_scheme)
 
-    if review_year[:4] not in ls_obj.LOADSHED_SCHEME:
-        return df
-
-    ref_scheme = review_year[:4]
-
-    df_merge = raise_flags(df_merge, ls_latest_cols, ref_scheme, ref_stage_col)
-
-    df_merge = df_merge.drop(columns=["assignment_id"] + ls_latest_cols)
+    df_merge = df_merge.drop(columns=ls_latest_cols)
 
     return df_merge

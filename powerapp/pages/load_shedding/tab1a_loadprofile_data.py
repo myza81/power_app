@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 from applications.load_shedding.load_profile import df_search_filter
+from css.streamlit_css import custom_metric_one_line
 
 
 def loadprofile_data():
@@ -83,7 +84,19 @@ def loadprofile_finder():
         label=f"Total Demand for {subs_input}:", value=f"{totalMW:.2f} MW")
     st.write(f"Zone: {zone} | Subzone: {gmzone} | State: {state}")
     for index, row in selected_subs.iterrows():
-        st.write(f"**{row["feeder_id"]}:** {row["Load (MW)"]} MW")
+        custom_metric_one_line(
+            title=f"",
+            values_obj={
+                f"{row["feeder_id"]}": f"{row["Load (MW)"]:.1f} MW",
+            },
+            title_size="18px",
+            item_color="#6b7280",
+            item_size="16px",
+            item_weight=700,
+            value_size="16px",
+            value_weight=700,
+            value_color="#2E86C1",
+        )
 
 
 def load_verifyer():
