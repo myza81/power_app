@@ -164,45 +164,6 @@ def custom_metric_two_line(
         unsafe_allow_html=True,
     )
 
-
-def scrollable_text_area(
-    label="",
-    text="",
-    text_color="#303339",
-    text_size="12px",
-    bg_color="#7C8492",
-    height=300,
-    key=None,
-    help_note="",
-):
-
-    widget_key = key or label.lower().replace(" ", "_")
-
-    st.markdown(f"""
-    <style>
-    div[data-testid="stTextarea"] {{
-        background-color: transparent !important;
-    }}
-    div.stTextArea > div {{
-        background-color: {bg_color} !important;
-    }}
-    textarea[aria-label="{label}"] {{
-        color: {text_color} !important;
-        font-size: {text_size} !important;
-        background-color: {bg_color} !important;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
-
-    return st.text_area(
-        label=label,
-        value=text,
-        height=height,
-        key=widget_key,
-        help=help_note,
-        # disabled=True
-    )
-
 def scrollable_text_box(text, height=300, bg_color="#7C8492", text_color="#303339", font_size="13px"):
     st.markdown(f"""
     <div style="

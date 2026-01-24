@@ -11,7 +11,6 @@ def ls_analytics_main():
     ls_assignment_flag()
 
 
-
 def ls_analytics():
     st.subheader("Load Sheddding Assignment Analytics")
 

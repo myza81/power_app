@@ -4,6 +4,7 @@ import pandas as pd
 from pages.load_shedding.tab4_simulator import potential_ls_candidate
 from pages.load_shedding.tab5b_critList_dashboard import critical_list_metric
 from pages.load_shedding.helper_chart import create_groupBar_chart
+from pages.load_shedding.helper import remove_duplicates_keep_nan
 
 
 def critical_list_analytic_main():
@@ -25,11 +26,17 @@ def critical_list_analytic():
     df_raw_cand, cand_with_crit, cand_without_crit = potential_ls_candidate(
         ls_obj)
 
-    cand_with_crit_zone = cand_with_crit.groupby(
+    cand_with_crit_uniq = remove_duplicates_keep_nan(
+        cand_with_crit, ["local_trip_id", "feeder_id"])
+
+    cand_without_crit_uniq = remove_duplicates_keep_nan(
+        cand_without_crit, ["local_trip_id", "feeder_id"])
+
+    cand_with_crit_zone = cand_with_crit_uniq.groupby(
         ["zone"], as_index=False, dropna=False
     ).agg({"Load (MW)": "sum"})
 
-    cand_without_crit_zone = cand_without_crit.groupby(
+    cand_without_crit_zone = cand_without_crit_uniq.groupby(
         ["zone"], as_index=False, dropna=False
     ).agg({"Load (MW)": "sum"})
 

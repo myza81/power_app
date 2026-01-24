@@ -18,10 +18,10 @@ def critical_list_metric():
         ls_obj)
 
     cand_with_crit_uniq = remove_duplicates_keep_nan(
-        cand_with_crit, "local_trip_id")
+        cand_with_crit, ["local_trip_id", "feeder_id", "mnemonic"])
 
     cand_without_crit_uniq = remove_duplicates_keep_nan(
-        cand_without_crit, "local_trip_id")
+        cand_without_crit, ["local_trip_id", "feeder_id", "mnemonic"])
 
     crit_zone = cand_with_crit_uniq.groupby(
         ["zone"], as_index=False, dropna=False
@@ -74,50 +74,53 @@ def critical_list_metric():
                     values_obj={
                         "Demand": f"{zoneDemand:,.0f} MW",
                         "Potential Quantum": f"{potential_quantum:,.0f} MW",
-                        "Critical List": f"{crit_zoneMW:,.0f} MW",
-
+                        "Critical Subs": f"{crit_zoneMW:,.0f} MW",
+                        "Net Without Critical Subs": f"{potential_quantum - crit_zoneMW:,.0f} MW",
+                        "Target": f"{(zoneDemand * 0.5):,.1f} MW (50%)",
+                        "Exclude Critical Substation": "✅" if potential_quantum - crit_zoneMW >= (zoneDemand * 0.5) else "❌",
+                        "Include Critical Substation": "✅" if potential_quantum >= (zoneDemand * 0.5) else "❌",
                     },
                     title_size="18px",
                     item_color="#9ca3af",
                     item_size="13px",
-                    item_weight=700,
+                    item_weight=500,
                     value_size="15px",
                     value_weight=700,
                     value_color="#2E86C1",
                 )
 
-                custom_metric_one_line(
-                    title=f"Potential 1:",
-                    values_obj={
-                        "W/out Critical List": f"{no_crit_zoneMW:,.0f} MW ({no_crit_zoneMW/zoneDemand*100:,.2f})%",
-                        "Net LPC": f"{lpc_no_crit:,.0f} MW",
-                        "Net Local Load": f"{local_no_crit:,.0f} MW",
-                        "Net Pocket Load": f"{pocket_no_crit:,.0f} MW",
-                        "Net Local + LPC": f"{local_no_crit+lpc_no_crit:,.0f} MW ({(local_no_crit+lpc_no_crit)/zoneDemand*100:,.2f})%",
-                    },
-                    title_size="18px",
-                    item_color="#9ca3af",
-                    item_size="13px",
-                    item_weight=700,
-                    value_size="15px",
-                    value_weight=700,
-                    value_color="#2E86C1",
-                )
+                # custom_metric_one_line(
+                #     title=f"Strategy 1: Exclude Critical Substations",
+                #     values_obj={
+                #         "Potential Quantum": f"{no_crit_zoneMW:,.0f} MW ({no_crit_zoneMW/zoneDemand*100:,.2f})%",
+                #         "LPC": f"{lpc_no_crit:,.0f} MW",
+                #         "Local Load": f"{local_no_crit:,.0f} MW",
+                #         "Pocket Load": f"{pocket_no_crit:,.0f} MW",
+                #         "Local + LPC": f"{local_no_crit+lpc_no_crit:,.0f} MW ({(local_no_crit+lpc_no_crit)/zoneDemand*100:,.2f})%",
+                #     },
+                #     title_size="16px",
+                #     item_color="#9ca3af",
+                #     item_size="13px",
+                #     item_weight=500,
+                #     value_size="15px",
+                #     value_weight=700,
+                #     value_color="#2E86C1",
+                # )
 
-                custom_metric_one_line(
-                    title=f"Potential 2:",
-                    values_obj={
-                        "Potential Quantum": f"{potential_quantum:,.0f} MW ({potential_quantum/zoneDemand*100:,.2f})%",
-                        "LPC": f"{lpc_crit+lpc_no_crit:,.0f} MW",
-                        "Local Load": f"{local_crit+local_no_crit:,.0f} MW",
-                        "Pocket Load": f"{pocket_crit+pocket_no_crit:,.0f} MW",
-                        "Local + LPC": f"{local_crit+local_no_crit+lpc_no_crit+lpc_crit:,.0f} MW ({(local_crit+local_no_crit+lpc_no_crit+lpc_crit)/zoneDemand*100:,.2f})%",
-                    },
-                    title_size="18px",
-                    item_color="#9ca3af",
-                    item_size="13px",
-                    item_weight=700,
-                    value_size="15px",
-                    value_weight=700,
-                    value_color="#2E86C1",
-                )
+                # custom_metric_one_line(
+                #     title=f"Strategy 2: Include Critical Substations",
+                #     values_obj={
+                #         "Potential Quantum": f"{potential_quantum:,.0f} MW ({potential_quantum/zoneDemand*100:,.2f})%",
+                #         "LPC": f"{lpc_crit+lpc_no_crit:,.0f} MW",
+                #         "Local Load": f"{local_crit+local_no_crit:,.0f} MW",
+                #         "Pocket Load": f"{pocket_crit+pocket_no_crit:,.0f} MW",
+                #         "Local + LPC": f"{local_crit+local_no_crit+lpc_no_crit+lpc_crit:,.0f} MW ({(local_crit+local_no_crit+lpc_no_crit+lpc_crit)/zoneDemand*100:,.2f})%",
+                #     },
+                #     title_size="16px",
+                #     item_color="#9ca3af",
+                #     item_size="13px",
+                #     item_weight=500,
+                #     value_size="15px",
+                #     value_weight=700,
+                #     value_color="#2E86C1",
+                # )

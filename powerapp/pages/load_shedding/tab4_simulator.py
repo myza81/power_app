@@ -7,7 +7,7 @@ from pages.load_shedding.tab4b_sim_dashboard import sim_dashboard
 from pages.load_shedding.tab4a_sim_conflict import conflict_assignment
 from pages.load_shedding.tab4c_sim_save import save_sim_data, col_sim_validation
 from applications.load_shedding.helper import scheme_col_sorted
-from css.streamlit_css import custom_metric, custom_metric_one_line, custom_metric_two_line, scrollable_text_area, scrollable_text_box
+from css.streamlit_css import custom_metric, custom_metric_two_line, scrollable_text_box, custom_metric_one_line
 
 SIM_STAGE = "Sim. Stage"
 
@@ -104,7 +104,8 @@ def simulator():
             st.session_state[export_sim_key] = False
 
         sim_df = conflict_assignment(
-            sim_df, ls_obj, base_scheme, SIM_STAGE)
+            sim_df, raw_candidate, ls_obj, base_scheme, SIM_STAGE
+        )
 
         sim_data["sim_df"] = sim_df
 
@@ -598,12 +599,29 @@ def render_conflict_details(row, assignment, ls_assign_mlist, ref_stage_col):
                 substation_name = "N/A"
                 flag_text = "N/A"
 
-        st.write(f"**Substation:** {substation_name}")
-        st.write(f"**Zone:** {row.get('Zone', 'N/A')}")
-        st.write(f"**State:** {row.get('state', 'N/A')}")
-        st.write(f"**Assignment:** {assignment}")
-        st.write(f"**{display_type}:** {row.get(ref_stage_col, 'N/A')}")
-        st.write(f"**Load:** {row.get('Load (MW)', 'N/A')} MW")
+        values_obj = {
+            "Substation": f"{substation_name}",
+            "Zone": f"{row.get('Zone', 'N/A')}",
+            "State": f"{row.get('state', 'N/A')}",
+            "Assignment": f"{assignment}",
+            f"{display_type}": f"{row.get(ref_stage_col, 'N/A')}",
+            "Load": f"{row.get('Load (MW)', 0):.1f} MW"
+        }
+
+        custom_metric_one_line(
+            title="",
+            values_obj=values_obj,
+            title_size="16px",
+            title_color="#6b7280",
+            title_weight=600,
+            item_size="12px",
+            item_color="#6b7280",
+            item_weight=400,
+            value_size="12px",
+            value_weight=400,
+            value_color="#2E86C1",
+            margin="0"
+        )
 
     with col2:
         flag = row.get("Flag", "N/A")

@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 from pages.load_shedding.helper import find_latest_assignment, join_unique_non_empty
-from pages.load_shedding.tab4_simulator import display_conflicts
+from pages.load_shedding.tab4_simulator import display_conflicts, potential_ls_candidate
 from pages.load_shedding.tab4a_sim_conflict import raise_flags
 
 
@@ -18,6 +18,7 @@ def ls_assignment_flag():
         return
 
     master_df = ls_obj.ls_assignment_masterlist().copy()
+    df_raw_cand, _, _ = potential_ls_candidate(ls_obj)
 
     scheme_cols = [
         c for c in master_df.columns if any(k in c for k in ls_obj.LOADSHED_SCHEME)
@@ -64,7 +65,13 @@ def ls_assignment_flag():
         df = df.rename(columns={"assignment_id": "Assignment", "zone": "Zone"})
         df["Critical Subs"] = np.where(df["critical_list"].isna(), "No", "Yes")
 
-        df_merge = raise_flags(df, ls_latest_cols, scheme[:4], scheme)
+        df_merge = raise_flags(
+            df,
+            df_raw_cand,
+            ls_latest_cols,
+            scheme[:4],
+            scheme
+        )
 
     with alarm_container:
         display_conflicts(df_merge, ls_obj, ref_stage_col=scheme)

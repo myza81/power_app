@@ -13,20 +13,68 @@ from applications.load_shedding.ufls_setting import UFLS_SETTING
 from applications.load_shedding.uvls_setting import UVLS_SETTING
 
 
+# def read_ls_data(file_path: str) -> Optional[pd.DataFrame]:
+#     try:
+#         df = pd.read_excel(file_path)
+#         df = df.apply(
+#             lambda s: s.astype(str).str.strip() if s.dtype == "object" else s,
+#             axis=0,
+#         )
+#         return df
+#     except FileNotFoundError:
+#         log_error(f"File not found: {file_path}")
+#         return None
+#     except Exception as e:
+#         log_error(f"Error processing file '{file_path}': {str(e)}")
+#         return None
+
+# def read_ls_data(file_path: str) -> Optional[pd.DataFrame]:
+#     try:
+#         df = pd.read_excel(file_path)
+#         df.columns = df.columns.str.replace("'", "").str.replace('"', "").str.strip()
+
+#         cols_to_fix = df.select_dtypes(include=["object"]).columns
+#         for col in cols_to_fix:
+#             df[col] = df[col].astype(str).str.strip().str.replace("'", "").str.replace('"', "")
+
+#         return df
+
+#     except FileNotFoundError:
+#         log_error(f"File not found: {file_path}")
+#     except Exception as e:
+#         log_error(f"Error processing file '{file_path}': {str(e)}")
+    
+#     return None
+
 def read_ls_data(file_path: str) -> Optional[pd.DataFrame]:
     try:
         df = pd.read_excel(file_path)
-        df = df.apply(
-            lambda s: s.astype(str).str.strip() if s.dtype == "object" else s,
-            axis=0,
+
+        # Clean column names
+        df.columns = (
+            df.columns
+            .astype(str)
+            .str.replace(r"[\"']", "", regex=True)
+            .str.strip()
         )
+
+        # Clean only non-null string values in object columns
+        obj_cols = df.select_dtypes(include="object").columns
+        for col in obj_cols:
+            df[col] = (
+                df[col]
+                .str.strip()
+                .str.replace(r"[\"']", "", regex=True)
+            )
+
         return df
+
     except FileNotFoundError:
         log_error(f"File not found: {file_path}")
-        return None
     except Exception as e:
-        log_error(f"Error processing file '{file_path}': {str(e)}")
-        return None
+        log_error(f"Error processing file '{file_path}': {e}")
+
+    return None
 
 
 def log_error(message: str) -> None:

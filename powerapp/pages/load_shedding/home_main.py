@@ -7,6 +7,7 @@ from pages.load_shedding.tab2_assignment import ls_assignment_main
 from pages.load_shedding.tab3_analytics import ls_analytics_main
 from pages.load_shedding.tab4_simulator import simulator
 from pages.load_shedding.tab5_critical_list import critical_list_main
+from pages.load_shedding.debug import debug
 
 
 st.set_page_config(layout="wide", page_title="UFLS")
@@ -34,12 +35,13 @@ if load_profile_uploader is not None:
     st.session_state["loadprofile"] = loadprofile
     st.session_state["loadshedding"] = LoadShedding(load_df=loadprofile.df)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "Load Profile",
         "Assignments",
         "Analytics",
         "Simulator",
         "Critical Load List",
+        "Debug"
     ])
 
     with tab1:
@@ -53,10 +55,13 @@ if load_profile_uploader is not None:
 
     with tab4:
         simulator()
-        pass
 
     with tab5:
         critical_list_main()
+
+    # with tab6:
+    #     debug()
+    
 
 else:
     st.info("Please upload or set a load profile first.")

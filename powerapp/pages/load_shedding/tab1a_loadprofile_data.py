@@ -82,7 +82,21 @@ def loadprofile_finder():
 
     st.metric(
         label=f"Total Demand for {subs_input}:", value=f"{totalMW:.2f} MW")
-    st.write(f"Zone: {zone} | Subzone: {gmzone} | State: {state}")
+
+    custom_metric_one_line(
+        title=f"",
+        values_obj={
+            "Zone": f"{zone} | Subzone: {gmzone} | State: {state}",
+        },
+        title_size="18px",
+        item_color="#6b7280",
+        item_size="14px",
+        item_weight=500,
+        value_size="14px",
+        value_weight=500,
+        value_color="#6b7280",
+    )
+
     for index, row in selected_subs.iterrows():
         custom_metric_one_line(
             title=f"",
@@ -91,9 +105,9 @@ def loadprofile_finder():
             },
             title_size="18px",
             item_color="#6b7280",
-            item_size="16px",
+            item_size="14px",
             item_weight=700,
-            value_size="16px",
+            value_size="15x",
             value_weight=700,
             value_color="#2E86C1",
         )

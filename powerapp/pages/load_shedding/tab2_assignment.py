@@ -228,11 +228,10 @@ def loadshedding_assignment() -> None:
                 ].sum()
 
                 create_donut_chart(
-                    df=dp_ls ,
+                    df=dp_ls,
                     values_col="Load (MW)",
                     names_col="dp_type",
                     title=f"{ls_sch} - by Load Type",
                     key=f"pie_dp_{ls_sch}",
                     annotations=f"{total_ls_mw:,.0f} MW",
                 )
-
