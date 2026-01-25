@@ -7,7 +7,7 @@ from pages.load_shedding.tab2_assignment import ls_assignment_main
 from pages.load_shedding.tab3_analytics import ls_analytics_main
 from pages.load_shedding.tab4_simulator import simulator
 from pages.load_shedding.tab5_critical_list import critical_list_main
-from pages.load_shedding.debug import debug
+from pages.load_shedding.administrator import update_meta
 
 
 st.set_page_config(layout="wide", page_title="UFLS")
@@ -41,7 +41,7 @@ if load_profile_uploader is not None:
         "Analytics",
         "Simulator",
         "Critical Load List",
-        "Debug"
+        "Administrator",
     ])
 
     with tab1:
@@ -59,8 +59,8 @@ if load_profile_uploader is not None:
     with tab5:
         critical_list_main()
 
-    # with tab6:
-    #     debug()
+    with tab6:
+        update_meta()
     
 
 else:

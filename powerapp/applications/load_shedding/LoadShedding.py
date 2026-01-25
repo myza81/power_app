@@ -13,59 +13,19 @@ from applications.load_shedding.ufls_setting import UFLS_SETTING
 from applications.load_shedding.uvls_setting import UVLS_SETTING
 
 
-# def read_ls_data(file_path: str) -> Optional[pd.DataFrame]:
-#     try:
-#         df = pd.read_excel(file_path)
-#         df = df.apply(
-#             lambda s: s.astype(str).str.strip() if s.dtype == "object" else s,
-#             axis=0,
-#         )
-#         return df
-#     except FileNotFoundError:
-#         log_error(f"File not found: {file_path}")
-#         return None
-#     except Exception as e:
-#         log_error(f"Error processing file '{file_path}': {str(e)}")
-#         return None
-
-# def read_ls_data(file_path: str) -> Optional[pd.DataFrame]:
-#     try:
-#         df = pd.read_excel(file_path)
-#         df.columns = df.columns.str.replace("'", "").str.replace('"', "").str.strip()
-
-#         cols_to_fix = df.select_dtypes(include=["object"]).columns
-#         for col in cols_to_fix:
-#             df[col] = df[col].astype(str).str.strip().str.replace("'", "").str.replace('"', "")
-
-#         return df
-
-#     except FileNotFoundError:
-#         log_error(f"File not found: {file_path}")
-#     except Exception as e:
-#         log_error(f"Error processing file '{file_path}': {str(e)}")
-    
-#     return None
-
 def read_ls_data(file_path: str) -> Optional[pd.DataFrame]:
     try:
         df = pd.read_excel(file_path)
 
         # Clean column names
         df.columns = (
-            df.columns
-            .astype(str)
-            .str.replace(r"[\"']", "", regex=True)
-            .str.strip()
+            df.columns.astype(str).str.replace(r"[\"']", "", regex=True).str.strip()
         )
 
         # Clean only non-null string values in object columns
         obj_cols = df.select_dtypes(include="object").columns
         for col in obj_cols:
-            df[col] = (
-                df[col]
-                .str.strip()
-                .str.replace(r"[\"']", "", regex=True)
-            )
+            df[col] = df[col].str.strip().str.replace(r"[\"']", "", regex=True)
 
         return df
 
@@ -112,11 +72,9 @@ class LoadShedding:
         self.uvls_setting = pd.DataFrame(UVLS_SETTING)
 
         # delivery_point.xlsx = one-to-one mirror to load profile file to match load with assignment. to update reqularly as system updated
-        self.delivery_point = read_ls_data(
-            get_path("delivery_point.xlsx", filedir))
+        self.delivery_point = read_ls_data(get_path("delivery_point.xlsx", filedir))
 
-        self.pocket_assign = read_ls_data(
-            get_path("pocket_assign.xlsx", filedir))
+        self.pocket_assign = read_ls_data(get_path("pocket_assign.xlsx", filedir))
 
         # rly_pocket.xlsx = associted breakers where the pocket loads are disconnected
         self.rly_pocket = read_ls_data(get_path("rly_pocket.xlsx", filedir))
@@ -160,8 +118,9 @@ class LoadShedding:
             return pd.DataFrame()
 
         subs_meta_df = self.subs_meta()
-        load_profile = self.load_profile[[
-            "mnemonic", "feeder_id", "Load (MW)", "state", "zone"]].copy()
+        load_profile = self.load_profile[
+            ["mnemonic", "feeder_id", "Load (MW)", "state", "zone"]
+        ].copy()
         load_profile["state"] = load_profile["state"].str.title()
 
         df = pd.merge(
@@ -172,16 +131,16 @@ class LoadShedding:
             suffixes=("_meta", "_profile"),
         )
 
-        df["state_meta"] = df["state_meta"].replace('nan', np.nan)
+        df["state_meta"] = df["state_meta"].replace("nan", np.nan)
         df["state"] = df["state_meta"].combine_first(df["state_profile"])
         df["zone"] = df["zone_meta"].combine_first(df["zone_profile"])
         df = df.drop(
-            columns=["state_meta", "state_profile", "zone_meta", "zone_profile"])
+            columns=["state_meta", "state_profile", "zone_meta", "zone_profile"]
+        )
 
         mask = df["substation_name"].notna()
         df["subs_fullname"] = df["mnemonic"].where(
-            ~mask,
-            df["mnemonic"] + " (" + df["substation_name"].fillna("") + ")"
+            ~mask, df["mnemonic"] + " (" + df["substation_name"].fillna("") + ")"
         )
 
         # st.write("submeta profile")
@@ -195,18 +154,21 @@ class LoadShedding:
         if df_raw.empty:
             return pd.DataFrame()
 
-        required_cols = ["state", "zone", "gm_subzone", "substation_name",
-                         "mnemonic", "subs_fullname", "coordinate"]
+        required_cols = [
+            "state",
+            "zone",
+            "gm_subzone",
+            "substation_name",
+            "mnemonic",
+            "subs_fullname",
+            "coordinate",
+        ]
 
         df = df_raw[required_cols].copy()
-        df_unique = df.drop_duplicates(
-            subset=required_cols,
-            keep='first'
-        ).reset_index(drop=True)
+        df_unique = df.drop_duplicates(subset=required_cols, keep="first").reset_index(
+            drop=True
+        )
 
-
-        # st.write("submeta profile")
-        # st.write(df_unique)
         return df_unique
 
     def zone_load_profile(self, zone):
@@ -263,19 +225,31 @@ class LoadShedding:
         if self.load_dp().empty:
             return pd.DataFrame()
 
-        flaglist = self.load_dp().loc[self.load_dp()[
-            "critical_list"].notna()].copy()
+        flaglist = self.load_dp().loc[self.load_dp()["critical_list"].notna()].copy()
 
         flaglist_grp = flaglist.groupby(
-            ["local_trip_id", "mnemonic", "substation_name", "kV", "coordinate",
-                "gm_subzone", "zone", "state", "critical_list", "short_text", "long_text"],
+            [
+                "local_trip_id",
+                "mnemonic",
+                "substation_name",
+                "kV",
+                "coordinate",
+                "gm_subzone",
+                "zone",
+                "state",
+                "critical_list",
+                "short_text",
+                "long_text",
+            ],
             as_index=False,
-            dropna=False
-        ).agg({
-            "Load (MW)": "sum",
-            "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
-            "breaker_id": lambda x: ", ".join(x.astype(str).unique()),
-        })
+            dropna=False,
+        ).agg(
+            {
+                "Load (MW)": "sum",
+                "feeder_id": lambda x: ", ".join(x.astype(str).unique()),
+                "breaker_id": lambda x: ", ".join(x.astype(str).unique()),
+            }
+        )
         flaglist_grp["critical_list"] = flaglist_grp["critical_list"].str.upper()
 
         return flaglist_grp
@@ -333,7 +307,7 @@ class LoadShedding:
                 "state": "State",
                 "gm_subzone": "Subzone",
                 "substation_name": "Substation",
-                "coordinate": "Coordinate"
+                "coordinate": "Coordinate",
             }
         )
 
@@ -343,12 +317,7 @@ class LoadShedding:
         if self.rly_incomer is None or self.load_dp().empty:
             return pd.DataFrame()
 
-        df = pd.merge(
-            self.rly_incomer,
-            self.load_dp(),
-            on="local_trip_id",
-            how="left"
-        )
+        df = pd.merge(self.rly_incomer, self.load_dp(), on="local_trip_id", how="left")
         df["assignment_id"] = df["local_trip_id"]
 
         return df
@@ -367,8 +336,7 @@ class LoadShedding:
             return pd.DataFrame()
 
         ls_masterlist = reduce(
-            lambda left, right: pd.merge(
-                left, right, on="assignment_id", how="outer"),
+            lambda left, right: pd.merge(left, right, on="assignment_id", how="outer"),
             [ufls, uvls, emls],
         )
 
@@ -410,8 +378,7 @@ class LoadShedding:
             and col not in available_scheme
         ]
 
-        filtered_df = filtered_df.drop(
-            columns=drop_cols, axis=1, errors="ignore")
+        filtered_df = filtered_df.drop(columns=drop_cols, axis=1, errors="ignore")
 
         for ls_review in available_scheme:
             selected_ls_cols_dict[ls_review] = op_stage
@@ -431,12 +398,10 @@ class LoadShedding:
             return pd.DataFrame()
 
         available_scheme_list = list(available_scheme)
-        filtered_df[available_scheme_list] = (
-            filtered_df[available_scheme_list]
-            .mask(lambda df: df.isin(["nan", "#na"]))
+        filtered_df[available_scheme_list] = filtered_df[available_scheme_list].mask(
+            lambda df: df.isin(["nan", "#na"])
         )
-        filtered_df = filtered_df.dropna(
-            subset=available_scheme_list, how="all")
+        filtered_df = filtered_df.dropna(subset=available_scheme_list, how="all")
 
         return filtered_df
 
